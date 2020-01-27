@@ -1,8 +1,23 @@
-import reader
-if __name__=="__main__":
+from reader import Reader
+def main():
     print("starting")
-    read =reader.readfile("a.txt")
-    print(read)
+    reader = Reader()
+    reader.readfile("Call_7_Vehicle_3.txt")
+
+
+
+
+
+
+
+
+
+
+    
+if __name__=="__main__":
+    main()
+
+    
 
 
 
