@@ -1,10 +1,11 @@
 class Reader:
 
     def __init__(self):
+        self.callsDict = {}
         self.num_nodes = 0
         self.num_vehicles = 0
         self.vehicles = []
-        self.vehiclesDict={}
+        self.vehiclesDict = {}
         self.calls = []
         self.compatibleCalls = {}
         self.travel = []
@@ -39,9 +40,11 @@ class Reader:
         vehicle num, home node, start time, capacity
         """
         return self.vehicles
+
     def getVehiclesDict(self):
         """
         vehicle num => home node, start time, capacity
+        :rtype: dict
         """
         return self.vehiclesDict
 
@@ -50,20 +53,24 @@ class Reader:
         index, origin, destination, size, fail cost, lowerbound time pickup , upperbound time pickup, lowerbound time delivery, upperbuond time delivery
         """
         return self.calls
-    def callWeight(self, call):
-        for i, o, d, s, f, l1, u1, l2, u2 in self.getCalls():
-            if i == call:
-                return s
-        raise Exception("illegal callIndex",call)
+
+    def getCallsDict(self):
+        """
+        map form index => origin, destination, size, fail cost, lowerbound time pickup , upperbound time pickup, lowerbound time delivery, upperbuond time delivery
+        :return: dict
+        """
+        return self.callsDict
+
     def getVertexDict(self):
         """
         map from (vehicle, oridin, destination) => (travel time, travel cost)
         """
         return self.vertex
-    
+
     def travelTime(self, vehicleNum, origin, dest):
         time, cost = self.vertex[vehicleNum, origin, dest]
         return time
+
     def travelCost(self, vehicleNum, origin, dest):
         time, cost = self.vertex[vehicleNum, origin, dest]
         return cost
@@ -88,25 +95,25 @@ class Reader:
         self.num_vehicles = int(fil.readline())
         fil.readline()
         # vehicles
-        while(True):
+        while (True):
             line = fil.readline()
             if line[0] == '%':
                 break
             i, home, time, cap = tuple([int(x) for x in line.split(",")])
             self.vehicles.append((i, home, time, cap))
-            self.vehiclesDict[i]=(home, time, cap)
+            self.vehiclesDict[i] = (home, time, cap)
         # num calls
         self.numCalls = int(fil.readline())
         fil.readline()
         # list of calls that can be transported using that vehicle
-        while(True):
+        while (True):
             line = fil.readline()
             if line[0] == '%':
                 break
             vals = [int(x) for x in line.split(",")]
             self.compatibleCalls[vals[0]] = vals[1:]
         # calls
-        while(True):
+        while (True):
             line = fil.readline()
             if line[0] == '%':
                 break
@@ -114,15 +121,16 @@ class Reader:
             i, origin, dest, s, c, lp, up, ld, ud = tuple(
                 [int(x) for x in line.split(",")])
             self.calls.append((i, origin, dest, s, c, lp, up, ld, ud))
+            self.callsDict[i] = (origin, dest, s, c, lp, up, ld, ud)
         # travel time and cost
-        while(True):
+        while (True):
             line = fil.readline()
             if line[0] == '%':
                 break
             v, o, d, t, c = tuple([int(x) for x in line.split(",")])
             self.vertex[(v, o, d)] = (t, c)
         # nodes
-        while(True):
+        while (True):
             line = fil.readline()
             if line[0] == '%':
                 break
