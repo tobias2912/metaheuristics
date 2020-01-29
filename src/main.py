@@ -7,7 +7,8 @@ reader = Reader()
 
 def main():
     print("starting")
-    reader.readfile("Call_7_Vehicle_3.txt")
+    #reader.readfile("data/Call_7_Vehicle_3.txt")
+    reader.readfile("data/Call_18_Vehicle_5.txt")
     carCalls = generateSolution()
     print(carCalls)
     if isFeasible(carCalls):
@@ -39,15 +40,15 @@ def totalCost(solution):
                     (_, _, _, failCost, _, _, _, _) = callsDict[call]
                     curCost = curCost + failCost
                 continue
+            # reset for next car
             carIndex = carIndex + 1
             startedCalls = []
             curNode, _, _ = vehicleDict[carIndex]
             continue
 
         (origin, dest, size, failCost, _, _, _, _) = callsDict[call]
-        firstVisit = call not in startedCalls
         _, originCost, _, destCost = nodeDict[(carIndex, call)]
-        if firstVisit:
+        if call not in startedCalls:
             startedCalls.append(call)
             curCost = curCost + originCost
             nextNode = origin
@@ -57,7 +58,6 @@ def totalCost(solution):
             nextNode = dest
         _, travelCost = vertexDict[(carIndex, curNode, nextNode)]
         curNode = nextNode
-
     return curCost
 
 
@@ -71,12 +71,12 @@ def sizeTimeLimit(solution):
     carIndex = 1
     curWeight = 0
     maxWeight = cap
-    visited = []
+    startedCalls = []
 
     for call in solution:
         if call == 0:
             carIndex = carIndex + 1
-            visited = []
+            startedCalls = []
             curWeight = 0
             curNode, curTime, maxWeight = vehicleDict[carIndex]
             continue
@@ -84,16 +84,16 @@ def sizeTimeLimit(solution):
             # dummy car
             return True
         (origin, dest, size, _, lowerPickup, upperPickup, lowerDelivery, upperDelivery) = callsDict[call]
-        firstVisit = call not in visited
+        firstVisit = call not in startedCalls
 
-        # cargo check
+        # capacity check
         if firstVisit:
-            visited.append(call)
+            startedCalls.append(call)
             curWeight = curWeight + size
             if curWeight > maxWeight:
                 return False
         else:
-            visited.remove(call)
+            startedCalls.remove(call)
             curWeight = curWeight - size
 
         # time check
@@ -114,7 +114,7 @@ def sizeTimeLimit(solution):
         else:
             if arrivalTime < lowerDelivery:
                 arrivalTime = lowerDelivery
-            if upperdelivery < arrivalTime:
+            if upperDelivery < arrivalTime:
                 return False
             curTime = arrivalTime + destTime
         curNode = nextNode
