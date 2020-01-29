@@ -1,19 +1,33 @@
 class Reader:
-    
+
     def __init__(self):
-        self.num_nodes=0
-        self.num_vehicles=0
+        self.num_nodes = 0
+        self.num_vehicles = 0
         self.vehicles = []
-        self.calls=[]
-        self.compatibleCalls={}
-        self.travel=[]
-        self.nodecost={}
+        self.vehiclesDict={}
+        self.calls = []
+        self.compatibleCalls = {}
+        self.travel = []
+        self.nodecost = {}
+        self.nodeCall = {}
+        self.vertex = {}
+
+    def possibleDelivery(self, origin):
+        """
+        list of possible (callIndex, deliverynode) from a origin node
+        """
+        liste = []
+        for (index, callOrigin, dest, _, _, _, _, _, _) in self.getCalls():
+            if callOrigin == origin:
+                liste.append((index, dest))
+        return liste
 
     def getNumCalls(self):
         """
         num calls
         """
         return self.numCalls
+
     def getCompatibleCalls(self):
         """
         map from vehicle num to list of compatible calls
@@ -25,18 +39,34 @@ class Reader:
         vehicle num, home node, start time, capacity
         """
         return self.vehicles
+    def getVehiclesDict(self):
+        """
+        vehicle num => home node, start time, capacity
+        """
+        return self.vehiclesDict
 
     def getCalls(self):
         """
         index, origin, destination, size, fail cost, lowerbound time pickup , upperbound time pickup, lowerbound time delivery, upperbuond time delivery
         """
         return self.calls
-
-    def getVertex(self):
+    def callWeight(self, call):
+        for i, o, d, s, f, l1, u1, l2, u2 in self.getCalls():
+            if i == call:
+                return s
+        raise Exception("illegal callIndex",call)
+    def getVertexDict(self):
         """
-        vehicle, origin , destination , travel time, travel cost
+        map from (vehicle, oridin, destination) => (travel time, travel cost)
         """
-        return self.travel
+        return self.vertex
+    
+    def travelTime(self, vehicleNum, origin, dest):
+        time, cost = self.vertex[vehicleNum, origin, dest]
+        return time
+    def travelCost(self, vehicleNum, origin, dest):
+        time, cost = self.vertex[vehicleNum, origin, dest]
+        return cost
 
     def getNodes(self):
         """
@@ -46,49 +76,58 @@ class Reader:
         """
         return self.nodecost
 
+    def isCompatible(self, car, call):
+        compatible = self.getCompatibleCalls()
+        return call in compatible[car]
+
     def readfile(self, name):
         fil = open(name)
         fil.readline()
-        num_nodes=int(fil.readline())
+        self.num_nodes = int(fil.readline())
         fil.readline()
-        num_vehicles=int(fil.readline())
+        self.num_vehicles = int(fil.readline())
         fil.readline()
-        #vehicles
+        # vehicles
         while(True):
-            line=fil.readline()
+            line = fil.readline()
             if line[0] == '%':
                 break
-            vals = [int(x) for x in line.split(",")]
-            self.vehicles.append(tuple(vals))
-        #num calls
+            i, home, time, cap = tuple([int(x) for x in line.split(",")])
+            self.vehicles.append((i, home, time, cap))
+            self.vehiclesDict[i]=(home, time, cap)
+        # num calls
         self.numCalls = int(fil.readline())
         fil.readline()
-        #list of calls that can be transported using that vehicle
+        # list of calls that can be transported using that vehicle
         while(True):
-            line=fil.readline()
+            line = fil.readline()
             if line[0] == '%':
                 break
             vals = [int(x) for x in line.split(",")]
-            self.compatibleCalls[vals[0]]=vals[1:]
-        #calls
+            self.compatibleCalls[vals[0]] = vals[1:]
+        # calls
         while(True):
-            line=fil.readline()
+            line = fil.readline()
             if line[0] == '%':
                 break
-            vals = [int(x) for x in line.split(",")]
-            self.calls.append(tuple(vals))
-        #travel time and cost
+            # i, origin, dest, size, cost penalty, lowerpickup, upperpickup, lowerdel, upperdel
+            i, origin, dest, s, c, lp, up, ld, ud = tuple(
+                [int(x) for x in line.split(",")])
+            self.calls.append((i, origin, dest, s, c, lp, up, ld, ud))
+        # travel time and cost
         while(True):
-            line=fil.readline()
+            line = fil.readline()
             if line[0] == '%':
                 break
-            vals = [int(x) for x in line.split(",")]
-            self.travel.append(tuple(vals))
-        #nodes
+            v, o, d, t, c = tuple([int(x) for x in line.split(",")])
+            self.vertex[(v, o, d)] = (t, c)
+        # nodes
         while(True):
-            line=fil.readline()
+            line = fil.readline()
             if line[0] == '%':
                 break
-            vehicle, call, origintime, origincosts, destinationtime, destinationcosts = tuple([int(x) for x in line.split(",")])
-            #self.nodecost.append(tuple(vals))
-            self.nodecost[(vehicle, call)]= (origintime, origincosts, destinationtime, destinationcosts)
+            vehicle, call, origintime, origincosts, destinationtime, destinationcosts = tuple(
+                [int(x) for x in line.split(",")])
+            # self.nodecost.append(tuple(vals))
+            self.nodecost[(vehicle, call)] = (
+                origintime, origincosts, destinationtime, destinationcosts)
