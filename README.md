@@ -1,15 +1,14 @@
-## metaheuristics
+# metaheuristics
 
-# løsningsrepresentasjon:
-en liste med calls for hver bil, separert med 0 mellom bilene. implisitt første call er pickup, andre like call er delivery. implisitt start og retur fra home node. [4, 4, 3, 3]
-siste "bilen" er en liste med calls som ikke er besøkt.
-må være par av calls og ingen repeterende
+## solution representation:
+a list of calls for each car separated with a 0. 
+first call is implicit pickup and second is delivery. 
+Last car is dummy car representing calls not delivered
+- fixed length of 2 x calls+number of vehicles
+- number of 0's = number of cars
+- 2 occurrences of each call
 
-- fixed lengde 
-- antall 0 = antall biler
-- nøyaktig 2 av hver call
-
-# feasibility
+## feasibility
 - vehicle capacity
 - pickup delivery by same vehicle
 - time window between pickup and delivery
