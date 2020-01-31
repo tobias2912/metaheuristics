@@ -6,14 +6,16 @@ reader = Reader()
 
 
 def main():
-    print("starting")
-    #reader.readfile("data/Call_7_Vehicle_3.txt")
-    reader.readfile("data/Call_18_Vehicle_5.txt")
+    #print("starting")
+    reader.readfile("data/Call_7_Vehicle_3.txt")
+    #reader.readfile("data/Call_18_Vehicle_5.txt")
     carCalls = generateSolution()
-    print(carCalls)
+    #print(carCalls)
     if isFeasible(carCalls):
         print("feasible")
-    print("objective function", totalCost(solution=carCalls))
+    #print("objective function", totalCost(solution=carCalls))
+
+    print(totalCost([3, 3, 0, 7, 1, 7, 1, 0, 5, 5, 0, 2, 2, 4, 4, 6, 6]))
 
 
 def isFeasible(solution):
@@ -34,11 +36,13 @@ def totalCost(solution):
 
     for call in solution:
         if call == 0 or dummyCar:
-            if carIndex + 1 > reader.num_vehicles:
+            if carIndex +1 > reader.num_vehicles:
                 dummyCar = True
-                if call != 0:
+                if call != 0 and call not in startedCalls:
                     (_, _, _, failCost, _, _, _, _) = callsDict[call]
                     curCost = curCost + failCost
+                    startedCalls.append(call)
+                    print("adding failcost of call", call)
                 continue
             # reset for next car
             carIndex = carIndex + 1
@@ -51,12 +55,16 @@ def totalCost(solution):
         if call not in startedCalls:
             startedCalls.append(call)
             curCost = curCost + originCost
+            print("add origincost of call", call)
             nextNode = origin
         else:
             startedCalls.remove(call)
             curCost = curCost + destCost
+            print("adding destCost of call", call)
             nextNode = dest
         _, travelCost = vertexDict[(carIndex, curNode, nextNode)]
+        curCost = curCost+travelCost
+        #print("adding travelcost of call",call)
         curNode = nextNode
     return curCost
 
@@ -168,7 +176,6 @@ def generateSolution():
     carCalls.extend(freeCalls)
     carCalls.extend(freeCalls)
     return carCalls
-
 
 if __name__ == "__main__":
     main()
