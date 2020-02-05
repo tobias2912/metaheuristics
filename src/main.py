@@ -1,22 +1,41 @@
 # from reader import Reader
 from src.reader import Reader
-
-# solution
+import random
+import math
 reader = Reader()
 
-
 def main():
-    #print("starting")
+    print("starting")
     reader.readfile("data/Call_7_Vehicle_3.txt")
-    #reader.readfile("data/Call_18_Vehicle_5.txt")
+    # reader.readfile("data/Call_18_Vehicle_5.txt")
     carCalls = generateSolution()
-    #print(carCalls)
-    if isFeasible(carCalls):
-        print("feasible")
     #print("objective function", totalCost(solution=carCalls))
+    print("randomsearch", randomSearch(generateRandom()))
 
-    print(totalCost([3, 3, 0, 7, 1, 7, 1, 0, 5, 5, 0, 2, 2, 4, 4, 6, 6]))
 
+def localSearch(initSolution, p1, p2, iterations=10000):
+    bestSolution = initSolution
+    for n in range(iterations):
+        rand = random.random()
+        if rand < p1:
+            current = twoExch(bestSolution)
+        elif rand < p1 + p2:
+            current = threeExch(bestSolution)
+        else:
+            current = oneRe(bestSolution)
+        if isFeasible(current) and totalCost(current) < totalCost(bestSolution):
+            bestSolution = current
+    return bestSolution
+
+
+def randomSearch(initSolution, iterations=10000):
+    bestSolution = initSolution
+    for i in range(iterations):
+        currentSolution = generateRandom()
+        if isFeasible(currentSolution) and totalCost(currentSolution) < totalCost(bestSolution):
+            bestSolution = currentSolution
+    print("randomsearch best is", totalCost(bestSolution), "with", bestSolution)
+    return bestSolution
 
 def isFeasible(solution):
     return onlyPairs(solution) and sizeTimeLimit(solution)
@@ -36,13 +55,12 @@ def totalCost(solution):
 
     for call in solution:
         if call == 0 or dummyCar:
-            if carIndex +1 > reader.num_vehicles:
+            if carIndex + 1 > reader.num_vehicles:
                 dummyCar = True
                 if call != 0 and call not in startedCalls:
                     (_, _, _, failCost, _, _, _, _) = callsDict[call]
                     curCost = curCost + failCost
                     startedCalls.append(call)
-                    print("adding failcost of call", call)
                 continue
             # reset for next car
             carIndex = carIndex + 1
@@ -55,16 +73,13 @@ def totalCost(solution):
         if call not in startedCalls:
             startedCalls.append(call)
             curCost = curCost + originCost
-            print("add origincost of call", call)
             nextNode = origin
         else:
             startedCalls.remove(call)
             curCost = curCost + destCost
-            print("adding destCost of call", call)
             nextNode = dest
         _, travelCost = vertexDict[(carIndex, curNode, nextNode)]
-        curCost = curCost+travelCost
-        #print("adding travelcost of call",call)
+        curCost = curCost + travelCost
         curNode = nextNode
     return curCost
 
@@ -84,13 +99,14 @@ def sizeTimeLimit(solution):
     for call in solution:
         if call == 0:
             carIndex = carIndex + 1
+            if carIndex >= reader.num_vehicles + 1:
+                # dummy car
+                return True
             startedCalls = []
             curWeight = 0
             curNode, curTime, maxWeight = vehicleDict[carIndex]
             continue
-        if carIndex == reader.num_vehicles:
-            # dummy car
-            return True
+
         (origin, dest, size, _, lowerPickup, upperPickup, lowerDelivery, upperDelivery) = callsDict[call]
         firstVisit = call not in startedCalls
 
@@ -176,6 +192,29 @@ def generateSolution():
     carCalls.extend(freeCalls)
     carCalls.extend(freeCalls)
     return carCalls
+
+
+def generateRandom():
+    car = {}
+    n = reader.num_vehicles + 1
+    for carN in range(1, n + 1):
+        car[carN] = []
+    calls = range(1, reader.getNumCalls() + 1)
+    # map random car to all call pairs
+    for call in calls:
+        carCalls = car[math.ceil(random.random() * n)]
+        carCalls.append(call)
+        carCalls.append(call)
+    # shuffle order of delivery
+    solution = []
+    for carN in range(1, n + 1):
+        carCalls = car[carN]
+        random.shuffle(carCalls)
+        solution += carCalls
+        solution += [0]
+    solution.pop()
+    return solution
+
 
 if __name__ == "__main__":
     main()
