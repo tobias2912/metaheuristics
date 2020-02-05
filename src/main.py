@@ -1,5 +1,7 @@
 # from reader import Reader
-from src.operators import *
+import numpy as np
+
+import src.operators
 from src.reader import Reader
 
 data = Reader()
@@ -8,10 +10,38 @@ data = Reader()
 def main():
     print("starting")
     data.readfile("data/Call_7_Vehicle_3.txt")
+    length = 17
     # reader.readfile("data/Call_18_Vehicle_5.txt")
     randomSearch(generateRandom())
     localSearch(generateRandom(), 1, 1)
-    simulatedAnnealing([3, 3, 0, 1, 7, 7, 1, 0, 5, 5, 0, 2, 2, 4, 4, 6, 6], 0.5, 0.5, 10000, 0.99)
+    annealingSetup()
+
+
+def annealingSetup():
+    pMax = 0.8
+    pMin = 0.1
+    minDelta, maxDelta = getDeltaE()
+    print("min and max deltas", minDelta, maxDelta)
+    t1 = -minDelta / np.log(pMax)
+    t2 = -maxDelta / np.log(pMax)
+    t3 = -minDelta / np.log(pMin)
+    t4 = -maxDelta / np.log(pMin)
+    startTemp = max(t1, t2, t3, t4)
+    endTemp = min(t1, t2, t3, t4)
+    print("starttemp",startTemp, "endtemp", endTemp)
+
+
+
+    simulatedAnnealing([0, 0, 0, 1, 1, 2, 2, 3, 3, 4, 4, 5, 5, 6, 6, 7, 7], 0.3, 0.3, startTemp, 0.99)
+
+
+def getDeltaE():
+    diff = []
+    for i in range(100):
+        t1 = totalCost(generateRandom())
+        t2 = totalCost(generateRandom())
+        diff.append(t1 - t2)
+    return min(diff), max(diff)
 
 
 def simulatedAnnealing(initSolution, p1, p2, tempStart, a, iterations=10000):
@@ -24,21 +54,27 @@ def simulatedAnnealing(initSolution, p1, p2, tempStart, a, iterations=10000):
     :param iterations: default 10k
     """
     print("starts simulated annealing with ", initSolution,
-          " p1:", p1," p2:", p2, " start temp:", tempStart, " a:", a, " i:",iterations)
+          " p1:", p1, " p2:", p2, " start temp:", tempStart, " a:", a, " i:", iterations)
+
     incumbent = initSolution.copy()
     bestSolution = initSolution.copy()
     temp = tempStart
     failed = 0
+    bettercount = 0
+    randomAccepts = 0
     for i in range(iterations):
-        rand = random.random()
+        assert len(initSolution) == src.operators.length
+        rand = src.operators.random.random()
 
         if rand < p1:
-            newSolution = twoExch(incumbent, data.num_vehicles)
+            assert len(initSolution) == src.operators.length
+            newSolution = src.operators.twoExch(incumbent, data.num_vehicles)
         elif rand < p1 + p2:
-            newSolution = threeExch(incumbent, data.num_vehicles)
+            assert len(initSolution) == src.operators.length
+            newSolution = src.operators.threeExch(incumbent, data.num_vehicles)
         else:
-            pass
-            newSolution = oneRe(incumbent)
+            assert len(initSolution) == src.operators.length
+            newSolution = src.operators.oneReinsert(incumbent, data.num_vehicles, data.numCalls)
         if not isFeasible(newSolution):
             failed += 1
             continue
@@ -46,28 +82,30 @@ def simulatedAnnealing(initSolution, p1, p2, tempStart, a, iterations=10000):
         if deltaE < 0:
             # always accept better solution
             incumbent = newSolution
+            bettercount += 1
             if totalCost(incumbent) < totalCost(bestSolution):
                 bestSolution = incumbent
-        elif random.random() < math.pow(math.e, -deltaE / temp):
+        elif src.operators.random.random() < src.operators.math.e ** (-deltaE / temp):
             incumbent = newSolution
-            #print("chance of acceptance is", math.e, -deltaE / temp, deltaE, temp)
+            randomAccepts += 1
+            print("chance of acceptance is", src.operators.math.e ** (-deltaE / temp))
         temp = temp * a
+        print("temp is now ", temp)
+    assert len(initSolution) == src.operators.length
     print("annealing search best is ", totalCost(bestSolution), " - ", bestSolution)
-    print("got", failed, "infeasible")
+    print("infeasible", failed, " random accepts", randomAccepts, "better neighbors", bettercount)
 
 
 def localSearch(initSolution, p1, p2, iterations=10000):
     bestSolution = initSolution
     for n in range(iterations):
-        rand = random.random()
+        rand = src.operators.random.random()
         if rand < p1 or True:
-            current = twoExch(bestSolution, data.num_vehicles)
+            current = src.operators.twoExch(bestSolution, data.num_vehicles)
         elif rand < p1 + p2:
-            # current = threeExch(bestSolution)
-            pass
+            current = src.operators.threeExch(bestSolution)
         else:
-            # current = oneRe(bestSolution)
-            pass
+            current = src.operators.oneReinsert(bestSolution)
         if isFeasible(current) and totalCost(current) < totalCost(bestSolution):
             bestSolution = current
     print("localsearch best is ", totalCost(bestSolution), " - ", bestSolution)
@@ -81,6 +119,7 @@ def randomSearch(initSolution, iterations=10000):
         if isFeasible(currentSolution) and totalCost(currentSolution) < totalCost(bestSolution):
             bestSolution = currentSolution
     print("randomsearch best is", totalCost(bestSolution), " - ", bestSolution)
+    assert len(initSolution) == data.numCalls * 2 + data.num_vehicles
     return bestSolution
 
 
@@ -249,14 +288,14 @@ def generateRandom():
     calls = range(1, data.getNumCalls() + 1)
     # map random car to all call pairs
     for call in calls:
-        carCalls = car[math.ceil(random.random() * n)]
+        carCalls = car[src.operators.math.ceil(src.operators.random.random() * n)]
         carCalls.append(call)
         carCalls.append(call)
     # shuffle order of delivery
     solution = []
     for carN in range(1, n + 1):
         carCalls = car[carN]
-        random.shuffle(carCalls)
+        src.operators.random.shuffle(carCalls)
         solution += carCalls
         solution += [0]
     solution.pop()
