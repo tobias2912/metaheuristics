@@ -1,30 +1,76 @@
 # from reader import Reader
+from src.operators import *
 from src.reader import Reader
-import random
-import math
-reader = Reader()
+
+data = Reader()
+
 
 def main():
     print("starting")
-    reader.readfile("data/Call_7_Vehicle_3.txt")
+    data.readfile("data/Call_7_Vehicle_3.txt")
     # reader.readfile("data/Call_18_Vehicle_5.txt")
-    carCalls = generateSolution()
-    #print("objective function", totalCost(solution=carCalls))
-    print("randomsearch", randomSearch(generateRandom()))
+    randomSearch(generateRandom())
+    localSearch(generateRandom(), 1, 1)
+    simulatedAnnealing([3, 3, 0, 1, 7, 7, 1, 0, 5, 5, 0, 2, 2, 4, 4, 6, 6], 0.5, 0.5, 10000, 0.99)
+
+
+def simulatedAnnealing(initSolution, p1, p2, tempStart, a, iterations=10000):
+    """
+    :param initSolution: random solution
+    :param p1: 2-exch probability
+    :param p2: 3-exch proability
+    :param tempStart: start temperature (0.8)
+    :param a: cooling
+    :param iterations: default 10k
+    """
+    print("starts simulated annealing with ", initSolution,
+          " p1:", p1," p2:", p2, " start temp:", tempStart, " a:", a, " i:",iterations)
+    incumbent = initSolution.copy()
+    bestSolution = initSolution.copy()
+    temp = tempStart
+    failed = 0
+    for i in range(iterations):
+        rand = random.random()
+
+        if rand < p1:
+            newSolution = twoExch(incumbent, data.num_vehicles)
+        elif rand < p1 + p2:
+            newSolution = threeExch(incumbent, data.num_vehicles)
+        else:
+            pass
+            newSolution = oneRe(incumbent)
+        if not isFeasible(newSolution):
+            failed += 1
+            continue
+        deltaE = totalCost(newSolution) - totalCost(incumbent)
+        if deltaE < 0:
+            # always accept better solution
+            incumbent = newSolution
+            if totalCost(incumbent) < totalCost(bestSolution):
+                bestSolution = incumbent
+        elif random.random() < math.pow(math.e, -deltaE / temp):
+            incumbent = newSolution
+            #print("chance of acceptance is", math.e, -deltaE / temp, deltaE, temp)
+        temp = temp * a
+    print("annealing search best is ", totalCost(bestSolution), " - ", bestSolution)
+    print("got", failed, "infeasible")
 
 
 def localSearch(initSolution, p1, p2, iterations=10000):
     bestSolution = initSolution
     for n in range(iterations):
         rand = random.random()
-        if rand < p1:
-            current = twoExch(bestSolution)
+        if rand < p1 or True:
+            current = twoExch(bestSolution, data.num_vehicles)
         elif rand < p1 + p2:
-            current = threeExch(bestSolution)
+            # current = threeExch(bestSolution)
+            pass
         else:
-            current = oneRe(bestSolution)
+            # current = oneRe(bestSolution)
+            pass
         if isFeasible(current) and totalCost(current) < totalCost(bestSolution):
             bestSolution = current
+    print("localsearch best is ", totalCost(bestSolution), " - ", bestSolution)
     return bestSolution
 
 
@@ -34,18 +80,19 @@ def randomSearch(initSolution, iterations=10000):
         currentSolution = generateRandom()
         if isFeasible(currentSolution) and totalCost(currentSolution) < totalCost(bestSolution):
             bestSolution = currentSolution
-    print("randomsearch best is", totalCost(bestSolution), "with", bestSolution)
+    print("randomsearch best is", totalCost(bestSolution), " - ", bestSolution)
     return bestSolution
+
 
 def isFeasible(solution):
     return onlyPairs(solution) and sizeTimeLimit(solution)
 
 
 def totalCost(solution):
-    vehicleDict = reader.getVehiclesDict()
-    vertexDict = reader.getVertexDict()
-    callsDict = reader.getCallsDict()
-    nodeDict = reader.getNodes()
+    vehicleDict = data.getVehiclesDict()
+    vertexDict = data.getVertexDict()
+    callsDict = data.getCallsDict()
+    nodeDict = data.getNodes()
     home, _, _ = vehicleDict[1]
     curNode = home
     carIndex = 1
@@ -55,7 +102,7 @@ def totalCost(solution):
 
     for call in solution:
         if call == 0 or dummyCar:
-            if carIndex + 1 > reader.num_vehicles:
+            if carIndex + 1 > data.num_vehicles:
                 dummyCar = True
                 if call != 0 and call not in startedCalls:
                     (_, _, _, failCost, _, _, _, _) = callsDict[call]
@@ -85,10 +132,10 @@ def totalCost(solution):
 
 
 def sizeTimeLimit(solution):
-    vehicleDict = reader.getVehiclesDict()
-    vertexDict = reader.getVertexDict()
-    callsDict = reader.getCallsDict()
-    nodeDict = reader.getNodes()
+    vehicleDict = data.getVehiclesDict()
+    vertexDict = data.getVertexDict()
+    callsDict = data.getCallsDict()
+    nodeDict = data.getNodes()
     home, curTime, cap = vehicleDict[1]
     curNode = home
     carIndex = 1
@@ -99,7 +146,7 @@ def sizeTimeLimit(solution):
     for call in solution:
         if call == 0:
             carIndex = carIndex + 1
-            if carIndex >= reader.num_vehicles + 1:
+            if carIndex >= data.num_vehicles + 1:
                 # dummy car
                 return True
             startedCalls = []
@@ -167,19 +214,19 @@ def onlyPairs(solution):
 
 def generateSolution():
     carCalls = []
-    freeCalls = list(range(1, reader.getNumCalls() + 1))
-    for carN, home, start, cap in reader.getVehicles():
+    freeCalls = list(range(1, data.getNumCalls() + 1))
+    for carN, home, start, cap in data.getVehicles():
         # car n does all possible calls
         currentTime = start
         currentNode = home
         currentCapacity = 0
-        for callN, origin, dest, size, cost, lowerPickup, upperPickup, lowerDel, upperDel in reader.getCalls():
-            if reader.isCompatible(carN, callN) and callN in freeCalls and currentCapacity + size <= cap:
+        for callN, origin, dest, size, cost, lowerPickup, upperPickup, lowerDel, upperDel in data.getCalls():
+            if data.isCompatible(carN, callN) and callN in freeCalls and currentCapacity + size <= cap:
                 # time constraint
                 pickuptime = currentTime + \
-                             reader.travelTime(carN, currentNode, origin)
+                             data.travelTime(carN, currentNode, origin)
                 deliverytime = pickuptime + \
-                               reader.travelTime(carN, origin, dest)
+                               data.travelTime(carN, origin, dest)
                 if lowerPickup <= pickuptime <= upperPickup and lowerDel <= deliverytime <= upperDel:
                     freeCalls.remove(callN)
                     carCalls.append(callN)
@@ -196,10 +243,10 @@ def generateSolution():
 
 def generateRandom():
     car = {}
-    n = reader.num_vehicles + 1
+    n = data.num_vehicles + 1
     for carN in range(1, n + 1):
         car[carN] = []
-    calls = range(1, reader.getNumCalls() + 1)
+    calls = range(1, data.getNumCalls() + 1)
     # map random car to all call pairs
     for call in calls:
         carCalls = car[math.ceil(random.random() * n)]
