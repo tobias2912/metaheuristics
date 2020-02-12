@@ -34,11 +34,11 @@ def twoExch(oldSolution, nCars):
             stop = n - 1
             break
     if start == stop + 1:
-        #print("stop")
+        # print("stop")
         return solution
     t1 = random.randint(start, stop)
     t2 = random.randint(start, stop)
-    #print("swaps", t1, t2)
+    # print("swaps", t1, t2)
     temp = solution[t1]
     solution[t1] = solution[t2]
     solution[t2] = temp
@@ -46,7 +46,7 @@ def twoExch(oldSolution, nCars):
     return solution
 
 
-def threeExch(oldsolution, nCars):
+def threeExch(old_solution, nCars):
     """
      swap three random numbers within one random car
      can return same solution
@@ -54,7 +54,7 @@ def threeExch(oldsolution, nCars):
      maintains validity
      :return: new solution
      """
-    solution = oldsolution.copy()
+    solution = old_solution.copy()
     carNumber = math.ceil(random.random() * nCars)
     carIndex = 1
     found = False

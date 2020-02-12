@@ -60,8 +60,8 @@ def run_heuristic(func, num_iterations, init_solution):
 
 def create_init_solution():
     solution = [0 for _ in range(data.num_vehicles)]
-    solution += list(range(1, data.numCalls + 1))
-    solution += list(range(1, data.numCalls + 1))
+    solution += list(range(1, data.num_calls + 1))
+    solution += list(range(1, data.num_calls + 1))
     return solution
 
 
@@ -120,7 +120,7 @@ def simulatedAnnealing(initSolution, p1, p2, tempStart, a, iterations=10000):
         elif rand < p1 + p2:
             newSolution = ops.threeExch(incumbent, data.num_vehicles)
         else:
-            newSolution = ops.oneReinsert(incumbent, data.num_vehicles, data.numCalls)
+            newSolution = ops.oneReinsert(incumbent, data.num_vehicles, data.num_calls)
         if not is_feasible(newSolution):
             failed += 1
             # print("failed")
@@ -161,12 +161,12 @@ def local_search(init_solution, p1=0.3, p2=0.3, iterations=10000):
     best_solution = init_solution.copy()
     for n in range(iterations):
         rand = ops.random.random()
-        if rand < p1 or True:
+        if rand < p1:
             current = ops.twoExch(best_solution, data.num_vehicles)
         elif rand < p1 + p2:
-            current = ops.threeExch(best_solution)
+            current = ops.threeExch(best_solution, data.num_vehicles)
         else:
-            current = ops.oneReinsert(best_solution)
+            current = ops.oneReinsert(best_solution, data.num_vehicles, data.num_calls)
         if is_feasible(current) and total_cost(current) < total_cost(best_solution):
             best_solution = current
     # print("localsearch best is ", totalCost(best_solution), " - ", best_solution)

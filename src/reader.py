@@ -3,7 +3,7 @@ class Reader:
     def __init__(self):
         self.callsDict = {}
         self.num_nodes = 0
-        self.numCalls = 0
+        self.num_calls = 0
         self.num_vehicles = 0
         self.vehicles = []
         self.vehiclesDict = {}
@@ -28,7 +28,7 @@ class Reader:
         """
         num calls
         """
-        return self.numCalls
+        return self.num_calls
 
     def getCompatibleCalls(self):
         """
@@ -104,7 +104,7 @@ class Reader:
             self.vehicles.append((i, home, time, cap))
             self.vehiclesDict[i] = (home, time, cap)
         # num calls
-        self.numCalls = int(fil.readline())
+        self.num_calls = int(fil.readline())
         fil.readline()
         # list of calls that can be transported using that vehicle
         while True:
