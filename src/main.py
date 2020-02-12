@@ -18,6 +18,8 @@ def main():
     testHeuristic()
 
 
+
+
 def testHeuristic(runs=10):
     start = time.time()
     totals = []
