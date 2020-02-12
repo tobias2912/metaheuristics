@@ -8,58 +8,89 @@ import src.operators as ops
 from src.reader import Reader
 
 data = Reader()
+files = ["data/Call_7_Vehicle_3.txt", "data/Call_18_Vehicle_5.txt", "data/Call_035_Vehicle_07.txt",
+         "data/Call_080_Vehicle_20.txt", "data/Call_130_Vehicle_40.txt"]
 
 
 def main():
     print("starting")
-    data.readfile("data/Call_7_Vehicle_3.txt")
-    # reader.readfile("data/Call_18_Vehicle_5.txt")
+    # data.readfile("data/Call_7_Vehicle_3.txt")
+
     # annealingSetup()
-    testHeuristic()
+    # testHeuristic()
+    test_all()
 
 
+def test_all():
+    num_iterations = 10
+    for file in files:
+        print("opening file", file)
+        data.readfile(file)
+        init_solution = create_init_solution()
+        init_total = total_cost(init_solution)
+        # random
+        random_solutions, best_total, runtime = run_heuristic(random_search, num_iterations, init_solution)
+        print("random search avg: ", sum(random_solutions) / num_iterations, "best", best_total)
+        print("improvement:", round(100 * (init_total - best_total) / init_total), " time: ", round(runtime))
+        # local search
+        local_solutions, best_total, runtime = run_heuristic(local_search, num_iterations, init_solution)
+        print("local search avg: ", sum(local_solutions) / num_iterations, "best", best_total)
+        print("improvement:", round(100 * (init_total - best_total) / init_total), " time: ", round(runtime))
+        # annealing
+        annealing_solutions, best_total, runtime = run_heuristic(annealingSetup, num_iterations, init_solution)
+        print("annealing search avg: ", sum(annealing_solutions) / num_iterations, "best", best_total)
+        print("improvement:", round(100 * (init_total - best_total) / init_total), " time: ", round(runtime))
 
 
-def testHeuristic(runs=10):
+def run_heuristic(func, num_iterations, init_solution):
+    """
+    :rtype: solution, best objective, time
+    """
+    solutions = []
+    bestTotal = total_cost(init_solution)
     start = time.time()
-    totals = []
-    for i in range(runs):
-        sol, cost = annealingSetup()
-        totals.append(cost)
+    for i in range(num_iterations):
+        sol, total = func(init_solution)
+        if total < bestTotal:
+            bestTotal = total
+        solutions.append(total)
     end = time.time()
-    print("average:")
-    print(sum(totals) / len(totals))
-    print("best:")
-    print(min(totals))
-    print("time used", end - start)
+    return solutions, bestTotal, end - start
 
 
-def annealingSetup():
+def create_init_solution():
+    solution = [0 for _ in range(data.num_vehicles)]
+    solution += list(range(1, data.numCalls + 1))
+    solution += list(range(1, data.numCalls + 1))
+    return solution
+
+
+def annealingSetup(init_solution):
     pMax = 0.8
     pMin = 0.1
     p1 = 0.2
     p2 = 0.2
     a = 0.99
     minDelta, maxDelta = getDeltaE()
-    print(f'min and max deltas {round(minDelta)}, {round(maxDelta)}')
+    # print(f'min and max deltas {round(minDelta)}, {round(maxDelta)}')
     t1 = -minDelta / np.log(pMax)
     t2 = -maxDelta / np.log(pMax)
     t3 = -minDelta / np.log(pMin)
     t4 = -maxDelta / np.log(pMin)
     startTemp = max(t1, t2, t3, t4)
     endTemp = min(t1, t2, t3, t4)
-    print("starttemp", round(startTemp), "endtemp", round(endTemp))
+    # print("starttemp", round(startTemp), "endtemp", round(endTemp))
 
-    solution = simulatedAnnealing([0, 0, 0, 1, 1, 2, 2, 3, 3, 4, 4, 5, 5, 6, 6, 7, 7], p1, p2, startTemp, a,
-                                  iterations=10000)
-    return solution
+    solution, objective = simulatedAnnealing(init_solution, p1, p2, startTemp, a,
+                                             iterations=10000)
+    return solution, objective
 
 
 def getDeltaE():
     diff = []
     for i in range(100):
-        t1 = totalCost(generateRandom())
-        t2 = totalCost(generateRandom())
+        t1 = total_cost(generateRandom())
+        t2 = total_cost(generateRandom())
         diff.append(abs(t1 - t2))
     return np.percentile(diff, 30), np.percentile(diff, 70)
     return min(diff), max(diff)
@@ -74,8 +105,7 @@ def simulatedAnnealing(initSolution, p1, p2, tempStart, a, iterations=10000):
     :param a: cooling
     :param iterations: default 10k
     """
-    print("starts simulated annealing with ", initSolution,
-          " p1:", p1, " p2:", p2, " start temp:", tempStart, " a:", a, " i:", iterations)
+    # print("starts simulated annealing with ", initSolution, " p1:", p1, " p2:", p2, " start temp:", tempStart, " a:", a, " i:", iterations)
     incumbent = initSolution.copy()
     bestSolution = initSolution.copy()
     temp = tempStart
@@ -83,7 +113,7 @@ def simulatedAnnealing(initSolution, p1, p2, tempStart, a, iterations=10000):
     betterCount = 0
     randomAccepts = 0
     for i in range(iterations):
-        print("------start iteration", i, "------")
+        # print("------start iteration", i, "------")
         rand = random.random()
         if rand < p1:
             newSolution = ops.twoExch(incumbent, data.num_vehicles)
@@ -91,74 +121,74 @@ def simulatedAnnealing(initSolution, p1, p2, tempStart, a, iterations=10000):
             newSolution = ops.threeExch(incumbent, data.num_vehicles)
         else:
             newSolution = ops.oneReinsert(incumbent, data.num_vehicles, data.numCalls)
-        if not isFeasible(newSolution):
+        if not is_feasible(newSolution):
             failed += 1
             # print("failed")
             continue
         if newSolution == incumbent:
             # print("no changes")
             continue
-        totnew = totalCost(newSolution)
-        totinc = totalCost(incumbent)
+        totnew = total_cost(newSolution)
+        totinc = total_cost(incumbent)
         if totinc == totnew:
             # print("no value changes")
             continue
         # print(newSolution)
         # print(incumbent)
-        print(totnew, totinc)
+        # print(totnew, totinc)
         deltaE = totnew - totinc
-        print("deltaE", deltaE, "temp", temp)
-        if deltaE > 0:
-            print("chance of accepting worse is", math.e ** (-deltaE / temp))
+        # print("deltaE", deltaE, "temp", temp)
+        # if deltaE > 0:
+        # print("chance of accepting worse is", math.e ** (-deltaE / temp))
         if deltaE < 0:
-            print("accepts better solution")
+            # print("accepts better solution")
             # always accept better solution
             incumbent = newSolution.copy()
             betterCount += 1
-            if totalCost(incumbent) < totalCost(bestSolution):
+            if total_cost(incumbent) < total_cost(bestSolution):
                 bestSolution = incumbent.copy()
         elif random.random() < math.e ** (-deltaE / temp):
-            print("accepted worse solution")
+            # print("accepted worse solution")
             incumbent = newSolution.copy()
             randomAccepts += 1
         temp = temp * a
-    print("\n annealing search best is ", totalCost(bestSolution), " - ", bestSolution)
-    print("infeasible", failed, " random accepts", randomAccepts, "better neighbors", betterCount)
-    return bestSolution, totalCost(bestSolution)
+    # print("\n annealing search best is ", totalCost(bestSolution), " - ", bestSolution)
+    # print("infeasible", failed, " random accepts", randomAccepts, "better neighbors", betterCount)
+    return bestSolution, total_cost(bestSolution)
 
 
-def localSearch(initSolution, p1, p2, iterations=10000):
-    bestSolution = initSolution
+def local_search(init_solution, p1=0.3, p2=0.3, iterations=10000):
+    best_solution = init_solution.copy()
     for n in range(iterations):
         rand = ops.random.random()
         if rand < p1 or True:
-            current = ops.twoExch(bestSolution, data.num_vehicles)
+            current = ops.twoExch(best_solution, data.num_vehicles)
         elif rand < p1 + p2:
-            current = ops.threeExch(bestSolution)
+            current = ops.threeExch(best_solution)
         else:
-            current = ops.oneReinsert(bestSolution)
-        if isFeasible(current) and totalCost(current) < totalCost(bestSolution):
-            bestSolution = current
-    print("localsearch best is ", totalCost(bestSolution), " - ", bestSolution)
-    return bestSolution
+            current = ops.oneReinsert(best_solution)
+        if is_feasible(current) and total_cost(current) < total_cost(best_solution):
+            best_solution = current
+    # print("localsearch best is ", totalCost(best_solution), " - ", best_solution)
+    return best_solution, total_cost(best_solution)
 
 
-def randomSearch(initSolution, iterations=10000):
-    bestSolution = initSolution
+def random_search(initSolution, iterations=10000):
+    bestSolution = initSolution.copy()
     for i in range(iterations):
         currentSolution = generateRandom()
-        if isFeasible(currentSolution) and totalCost(currentSolution) < totalCost(bestSolution):
+        if is_feasible(currentSolution) and total_cost(currentSolution) < total_cost(bestSolution):
             bestSolution = currentSolution
-    print("randomsearch best is", totalCost(bestSolution), " - ", bestSolution)
-    assert len(initSolution) == data.numCalls * 2 + data.num_vehicles
-    return bestSolution
+    # print("randomsearch best is", totalCost(bestSolution), " - ", bestSolution)
+    # assert len(initSolution) == data.numCalls * 2 + data.num_vehicles
+    return bestSolution, total_cost(bestSolution)
 
 
-def isFeasible(solution):
+def is_feasible(solution):
     return onlyPairs(solution) and sizeTimeLimit(solution)
 
 
-def totalCost(solution):
+def total_cost(solution):
     vehicleDict = data.getVehiclesDict()
     vertexDict = data.getVertexDict()
     callsDict = data.getCallsDict()
@@ -283,51 +313,51 @@ def onlyPairs(solution):
 
 
 def generateSolution():
-    carCalls = []
-    freeCalls = list(range(1, data.getNumCalls() + 1))
+    car_calls = []
+    free_calls = list(range(1, data.getNumCalls() + 1))
     for carN, home, start, cap in data.getVehicles():
         # car n does all possible calls
-        currentTime = start
-        currentNode = home
-        currentCapacity = 0
+        current_time = start
+        current_node = home
+        current_capacity = 0
         for callN, origin, dest, size, cost, lowerPickup, upperPickup, lowerDel, upperDel in data.getCalls():
-            if data.isCompatible(carN, callN) and callN in freeCalls and currentCapacity + size <= cap:
+            if data.isCompatible(carN, callN) and callN in free_calls and current_capacity + size <= cap:
                 # time constraint
-                pickuptime = currentTime + \
-                             data.travelTime(carN, currentNode, origin)
+                pickuptime = current_time + \
+                             data.travelTime(carN, current_node, origin)
                 deliverytime = pickuptime + \
                                data.travelTime(carN, origin, dest)
                 if lowerPickup <= pickuptime <= upperPickup and lowerDel <= deliverytime <= upperDel:
-                    freeCalls.remove(callN)
-                    carCalls.append(callN)
-                    carCalls.append(callN)
-                    currentNode = dest
-                    currentTime = deliverytime
+                    free_calls.remove(callN)
+                    car_calls.append(callN)
+                    car_calls.append(callN)
+                    current_node = dest
+                    current_time = deliverytime
 
-        carCalls.append(0)
+        car_calls.append(0)
     # dummy car
-    carCalls.extend(freeCalls)
-    carCalls.extend(freeCalls)
-    return carCalls
+    car_calls.extend(free_calls)
+    car_calls.extend(free_calls)
+    return car_calls
 
 
 def generateRandom():
     car = {}
-    n = data.num_vehicles + 1
-    for carN in range(1, n + 1):
+    num_vehicles = data.num_vehicles + 1
+    for carN in range(1, num_vehicles + 1):
         car[carN] = []
     calls = range(1, data.getNumCalls() + 1)
     # map random car to all call pairs
     for call in calls:
-        carCalls = car[math.ceil(random.random() * n)]
-        carCalls.append(call)
-        carCalls.append(call)
+        car_calls = car[math.ceil(random.random() * num_vehicles)]
+        car_calls.append(call)
+        car_calls.append(call)
     # shuffle order of delivery
     solution = []
-    for carN in range(1, n + 1):
-        carCalls = car[carN]
-        random.shuffle(carCalls)
-        solution += carCalls
+    for carN in range(1, num_vehicles + 1):
+        car_calls = car[carN]
+        random.shuffle(car_calls)
+        solution += car_calls
         solution += [0]
     solution.pop()
     return solution

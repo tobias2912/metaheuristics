@@ -38,7 +38,7 @@ def twoExch(oldSolution, nCars):
         return solution
     t1 = random.randint(start, stop)
     t2 = random.randint(start, stop)
-    print("swaps", t1, t2)
+    #print("swaps", t1, t2)
     temp = solution[t1]
     solution[t1] = solution[t2]
     solution[t2] = temp
@@ -77,7 +77,7 @@ def threeExch(oldsolution, nCars):
     solution[t2] = solution[t3]
     solution[t3] = temp
     assert solution[t1] != 0 and solution[t2] != 0 and solution[t3] != 0
-    print("swapped", t1, t2, t3)
+    #print("swapped", t1, t2, t3)
     return solution
 
 
@@ -94,7 +94,6 @@ def oneReinsert(initSolution: list, nCars, nCalls):
     solution.remove(call)
     # add randomly to new car
     carNumber = math.ceil(random.random() * (nCars+1))
-
     carIndex = 1
     found = False
     for n, i in enumerate(solution):
@@ -119,7 +118,7 @@ def oneReinsert(initSolution: list, nCars, nCalls):
         t2 = random.randint(start, stop)
         solution.insert(t1, call)
         solution.insert(t2, call)
-    print("inserted ", call, "at ", carNumber)
+    #print("inserted ", call, "at ", carNumber)
     assert call != 0
     return solution
 
