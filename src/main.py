@@ -20,11 +20,115 @@ def main():
 
 
 def test_annealing():
-    #data.readfile("data/Call_035_Vehicle_07.txt")  # 5M er best
-    data.readfile("data/Call_7_Vehicle_3.txt")  # 5M er best
-    iterations = 5
+    iterations = 3
+    data.readfile("data/Call_035_Vehicle_07.txt")  # 5M er best
+    #data.readfile("data/Call_7_Vehicle_3.txt")  # 5M er best
     sol, best, time = run_heuristic(annealingSetup, iterations, create_init_solution())
     print("avg", sum(sol) / iterations, "best", best, "time", time)
+
+
+def run_heuristic(func, num_iterations, init_solution):
+    """
+    :rtype: solution, best objective, time
+    """
+    solution_objectives = []
+    bestTotal = total_cost(init_solution)
+    start = time.time()
+    for i in range(num_iterations):
+        sol, total = func(init_solution)
+        if total < bestTotal:
+            bestTotal = total
+        solution_objectives.append(total)
+    end = time.time()
+    return solution_objectives, bestTotal, end - start
+
+
+def annealingSetup(init_solution):
+    iterations = 10000
+    pMax = 0.6
+    pMin = 0.1
+    p1 = 0.4
+    p2 = 0.1
+    minDelta, maxDelta = getDeltaE()
+    print(f'min and max deltas {round(minDelta)}, {round(maxDelta)}')
+    t1 = -minDelta / np.log(pMax)
+    t2 = -maxDelta / np.log(pMax)
+    t3 = -minDelta / np.log(pMin)
+    t4 = -maxDelta / np.log(pMin)
+    startTemp = max(t1, t2, t3, t4)
+    endTemp = min(t1, t2, t3, t4)
+    # a = math.pow(startTemp / endTemp, 1 / iterations)
+    a = 0.991
+    print("starttemp", round(startTemp), "endtemp", round(endTemp), "a", a)
+    solution, objective = simulatedAnnealing(init_solution, p1, p2, startTemp, a, iterations)
+    return solution, objective
+
+
+def simulatedAnnealing(initSolution, p1, p2, tempStart, a, iterations=10000):
+    """
+    :param initSolution: random solution
+    :param p1: 2-exch probability
+    :param p2: 3-exch proability
+    :param tempStart: start temperature
+    :param a: cooling
+    :param iterations: default 10k
+    """
+    print("starts simulated annealing with p1:", p1, " p2:", p2, " start temp:", tempStart, " a:", a,
+          " i:", iterations)
+    incumbent = initSolution.copy()
+    bestSolution = initSolution.copy()
+    temp = tempStart
+    not_feasible, betterCount, randomAccepts, no_changes1, no_changes2, no_changes3 = 0, 0, 0, 0, 0, 0
+    for i in range(iterations):
+        rand = random.random()
+        if rand < p1:
+            newSolution = ops.twoExch(incumbent, data.num_vehicles)
+        elif rand < p1 + p2:
+            newSolution = ops.threeExch(incumbent, data.num_vehicles)
+        else:
+            newSolution = ops.oneReinsert(incumbent, data.num_vehicles, data.num_calls)
+        if not is_feasible(newSolution):
+            not_feasible += 1
+            continue
+        totnew = total_cost(newSolution)
+        totinc = total_cost(incumbent)
+        if newSolution == incumbent:
+            if rand < p1:
+                no_changes1 += 1
+
+            elif rand < p1 + p2:
+                no_changes2 += 1
+                #print("same objective:",totinc==totnew,"same solution:", newSolution==incumbent)
+                #print("no changes between:")
+                #print(incumbent)
+                #print(newSolution)
+            else:
+                no_changes3 += 1
+            continue
+        # print(newSolution)
+        # print(incumbent)
+        deltaE = totnew - totinc
+        #print("iteration", i, "deltaE", deltaE, "temp", round(temp))
+        #if deltaE > 0:
+        #    print("chance of accepting worse is", math.e ** (-deltaE / temp))
+        if deltaE < 0:
+            # print("accepts better solution")
+            incumbent = newSolution.copy()
+            betterCount += 1
+            if rand >= p1 + p2:
+                update_zeroindex(incumbent)
+            if total_cost(incumbent) < total_cost(bestSolution):
+                bestSolution = incumbent.copy()
+        elif random.random() < math.e ** (-deltaE / temp):
+            incumbent = newSolution.copy()
+            randomAccepts += 1
+            if rand >= p1 + p2:
+                update_zeroindex(incumbent)
+        temp = temp * a
+    print("\n annealing search best is ", total_cost(bestSolution))
+    print("infeasible", not_feasible, " random accepts", randomAccepts, "better neighbors", betterCount
+          , "no changes:", no_changes1, no_changes2, no_changes3)
+    return bestSolution, total_cost(bestSolution)
 
 
 def test_all():
@@ -48,59 +152,6 @@ def test_all():
         print("improvement:", round(100 * (init_total - best_total) / init_total), " time: ", round(runtime))
 
 
-def run_heuristic(func, num_iterations, init_solution):
-    """
-    :rtype: solution, best objective, time
-    """
-    ops.zero_index.clear()
-    car_index = 2
-    ops.zero_index[1] = 0
-    for i, call in enumerate(init_solution):
-        if call == 0:
-            ops.zero_index[car_index] = i + 1
-            car_index += 1
-    print(ops.zero_index)
-    solution_objectives = []
-    bestTotal = total_cost(init_solution)
-    start = time.time()
-    for i in range(num_iterations):
-        sol, total = func(init_solution)
-        if total < bestTotal:
-            bestTotal = total
-        solution_objectives.append(total)
-    end = time.time()
-    return solution_objectives, bestTotal, end - start
-
-
-def create_init_solution():
-    solution = [0 for _ in range(data.num_vehicles)]
-    solution += list(range(1, data.num_calls + 1))
-    solution += list(range(1, data.num_calls + 1))
-    return solution
-
-
-def annealingSetup(init_solution):
-    iterations = 10000
-    pMax = 0.8
-    pMin = 0.1
-    p1 = 0.5
-    p2 = 0.1
-    minDelta, maxDelta = getDeltaE()
-    print(f'min and max deltas {round(minDelta)}, {round(maxDelta)}')
-    t1 = -minDelta / np.log(pMax)
-    t2 = -maxDelta / np.log(pMax)
-    t3 = -minDelta / np.log(pMin)
-    t4 = -maxDelta / np.log(pMin)
-    startTemp = max(t1, t2, t3, t4)
-    endTemp = min(t1, t2, t3, t4)
-    # a = math.pow(startTemp / endTemp, 1 / iterations)
-    a = 0.993
-    print("starttemp", round(startTemp), "endtemp", round(endTemp), "a", a)
-
-    solution, objective = simulatedAnnealing(init_solution, p1, p2, startTemp, a, iterations)
-    return solution, objective
-
-
 def getDeltaE():
     diff = []
     for i in range(50):
@@ -110,68 +161,11 @@ def getDeltaE():
     return np.percentile(diff, 10), np.percentile(diff, 90)
 
 
-def simulatedAnnealing(initSolution, p1, p2, tempStart, a, iterations=10000):
-    """
-    :param initSolution: random solution
-    :param p1: 2-exch probability
-    :param p2: 3-exch proability
-    :param tempStart: start temperature (0.8)
-    :param a: cooling
-    :param iterations: default 10k
-    """
-    print("starts simulated annealing with ", initSolution, " p1:", p1, " p2:", p2, " start temp:", tempStart, " a:", a,
-          " i:", iterations)
-    incumbent = initSolution.copy()
-    bestSolution = initSolution.copy()
-    temp = tempStart
-    not_feasible, betterCount, randomAccepts, no_changes1, no_changes2, no_changes3 = 0, 0, 0, 0, 0, 0
-    for i in range(iterations):
-        # print("------start iteration", i, "------")
-        rand = random.random()
-        if rand < p1:
-            newSolution = ops.twoExch(incumbent, data.num_vehicles)
-        elif rand < p1 + p2:
-            newSolution = ops.threeExch(incumbent, data.num_vehicles)
-        else:
-            newSolution = ops.oneReinsert(incumbent, data.num_vehicles, data.num_calls)
-        if not is_feasible(newSolution):
-            not_feasible += 1
-            continue
-        totnew = total_cost(newSolution)
-        totinc = total_cost(incumbent)
-        if totinc == totnew or newSolution == incumbent:
-            if rand < p1:
-                no_changes1 += 1
-            elif rand < p1 + p2:
-                no_changes2 += 1
-            else:
-                no_changes3 += 1
-            continue
-        # print(newSolution)
-        # print(incumbent)
-
-        deltaE = totnew - totinc
-        print("iteration", i, "deltaE", deltaE, "temp", round(temp))
-        if deltaE > 0:
-            print("chance of accepting worse is", math.e ** (-deltaE / temp))
-        if deltaE < 0:
-            # print("accepts better solution")
-            incumbent = newSolution.copy()
-            betterCount += 1
-            if rand >= p1 + p2:
-                update_zeroindex(incumbent)
-            if total_cost(incumbent) < total_cost(bestSolution):
-                bestSolution = incumbent.copy()
-        elif random.random() < math.e ** (-deltaE / temp):
-            incumbent = newSolution.copy()
-            randomAccepts += 1
-            if rand >= p1 + p2:
-                update_zeroindex(incumbent)
-        temp = temp * a
-    print("\n annealing search best is ", total_cost(bestSolution))
-    print("infeasible", not_feasible, " random accepts", randomAccepts, "better neighbors", betterCount
-          , "no changes:", no_changes1, no_changes2, no_changes3)
-    return bestSolution, total_cost(bestSolution)
+def create_init_solution():
+    solution = [0 for _ in range(data.num_vehicles)]
+    solution += list(range(1, data.num_calls + 1))
+    solution += list(range(1, data.num_calls + 1))
+    return solution
 
 
 def update_zeroindex(incumbent):
@@ -324,7 +318,7 @@ def onlyPairs(solution):
         if call == 0:
             for c in count.keys():
                 if count[c] != 2:
-                    print("call", c, "found ", count[c], "times")
+                    #print("call", c, "found ", count[c], "times")
                     return False
             count.clear()
             continue
@@ -333,7 +327,7 @@ def onlyPairs(solution):
         count[call] = count[call] + 1
     for c in count.keys():
         if count[c] != 2:
-            print("call", c, "found ", count[c], "times")
+            #print("call", c, "found ", count[c], "times")
             return False
     return True
 
