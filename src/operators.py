@@ -109,32 +109,9 @@ def threeExch(old_solution, nCars):
     return solution
 
 
-def threeExchRandom(oldSolution, nCars):
-    solution = oldSolution.copy()
-    t1 = random.randint(0, len(solution) - 1)
-    t2 = random.randint(0, len(solution) - 1)
-    t3 = random.randint(0, len(solution) - 1)
-    temp = solution[t1]
-    solution[t1] = solution[t2]
-    solution[t2] = solution[t3]
-    solution[t3] = temp
-    return solution
-
-
-def twoExchRandom(oldSolution, nCars):
-    solution = oldSolution.copy()
-    t1 = random.randint(0, len(solution) - 1)
-    t2 = random.randint(0, len(solution) - 1)
-    temp = solution[t1]
-    solution[t1] = solution[t2]
-    solution[t2] = temp
-    return solution
-
-
 def oneReinsert(initSolution: list, nCars, nCalls):
     """
     swap a random call to new random car
-    :param solution:
     """
     solution = initSolution.copy()
     call = math.ceil(nCalls * random.random())
@@ -158,7 +135,6 @@ def oneReinsert(initSolution: list, nCars, nCalls):
         if carIndex == carNumber + 1:
             stop = n - 1
             break
-    # print("between", start, stop)
     if start == stop + 1:
         # empty car
         solution.insert(start, call)
@@ -170,8 +146,29 @@ def oneReinsert(initSolution: list, nCars, nCalls):
         solution.insert(t2, call)
     # print("inserted ", call, "at ", carNumber)
     # update indexes
-
     assert call != 0
+    return solution
+
+
+def threeExchRandom(oldSolution, nCars):
+    solution = oldSolution.copy()
+    t1 = random.randint(0, len(solution) - 1)
+    t2 = random.randint(0, len(solution) - 1)
+    t3 = random.randint(0, len(solution) - 1)
+    temp = solution[t1]
+    solution[t1] = solution[t2]
+    solution[t2] = solution[t3]
+    solution[t3] = temp
+    return solution
+
+
+def twoExchRandom(oldSolution, nCars):
+    solution = oldSolution.copy()
+    t1 = random.randint(0, len(solution) - 1)
+    t2 = random.randint(0, len(solution) - 1)
+    temp = solution[t1]
+    solution[t1] = solution[t2]
+    solution[t2] = temp
     return solution
 
 

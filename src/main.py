@@ -13,18 +13,19 @@ files = ["data/Call_7_Vehicle_3.txt", "data/Call_18_Vehicle_5.txt", "data/Call_0
 
 
 def main():
-    #data.readfile("data/Call_7_Vehicle_3.txt")  # 5M er best
-    #run_heuristic(annealingSetup, 1, [3, 3, 0, 7, 1, 7, 1, 0, 5, 5, 0, 2, 2, 4, 4, 6, 6])
+    # data.readfile("data/Call_7_Vehicle_3.txt")  # 5M er best
+    # run_heuristic(annealingSetup, 1, [3, 3, 0, 7, 1, 7, 1, 0, 5, 5, 0, 2, 2, 4, 4, 6, 6])
     test_annealing()
     # test_all()
 
 
 def test_annealing():
-    iterations = 3
+    iterations = 5
     data.readfile("data/Call_035_Vehicle_07.txt")  # 5M er best
-    #data.readfile("data/Call_7_Vehicle_3.txt")  # 5M er best
+    # data.readfile("data/Call_7_Vehicle_3.txt")  # 5M er best
     sol, best, time = run_heuristic(annealingSetup, iterations, create_init_solution())
-    print("avg", sum(sol) / iterations, "best", best, "time", time)
+    print("\n\n annealing test result")
+    print("avg", sum(sol) / iterations, "best", best, "time", round(time))
 
 
 def run_heuristic(func, num_iterations, init_solution):
@@ -50,6 +51,7 @@ def annealingSetup(init_solution):
     p1 = 0.4
     p2 = 0.1
     minDelta, maxDelta = getDeltaE()
+    print("\n annealing setup")
     print(f'min and max deltas {round(minDelta)}, {round(maxDelta)}')
     t1 = -minDelta / np.log(pMax)
     t2 = -maxDelta / np.log(pMax)
@@ -58,7 +60,7 @@ def annealingSetup(init_solution):
     startTemp = max(t1, t2, t3, t4)
     endTemp = min(t1, t2, t3, t4)
     # a = math.pow(startTemp / endTemp, 1 / iterations)
-    a = 0.991
+    a = 0.99
     print("starttemp", round(startTemp), "endtemp", round(endTemp), "a", a)
     solution, objective = simulatedAnnealing(init_solution, p1, p2, startTemp, a, iterations)
     return solution, objective
@@ -78,8 +80,12 @@ def simulatedAnnealing(initSolution, p1, p2, tempStart, a, iterations=10000):
     incumbent = initSolution.copy()
     bestSolution = initSolution.copy()
     temp = tempStart
-    not_feasible, betterCount, randomAccepts, no_changes1, no_changes2, no_changes3 = 0, 0, 0, 0, 0, 0
+    random_accepts_list = []
+    not_feasible, better_count, random_accepts_count, no_changes1, no_changes2, no_changes3 = 0, 0, 0, 0, 0, 0
     for i in range(iterations):
+        if i % 1000 == 0:
+            random_accepts_list.append(random_accepts_count)
+            random_accepts_count = 0
         rand = random.random()
         if rand < p1:
             newSolution = ops.twoExch(incumbent, data.num_vehicles)
@@ -95,39 +101,36 @@ def simulatedAnnealing(initSolution, p1, p2, tempStart, a, iterations=10000):
         if newSolution == incumbent:
             if rand < p1:
                 no_changes1 += 1
-
             elif rand < p1 + p2:
                 no_changes2 += 1
-                #print("same objective:",totinc==totnew,"same solution:", newSolution==incumbent)
-                #print("no changes between:")
-                #print(incumbent)
-                #print(newSolution)
             else:
                 no_changes3 += 1
             continue
-        # print(newSolution)
-        # print(incumbent)
         deltaE = totnew - totinc
-        #print("iteration", i, "deltaE", deltaE, "temp", round(temp))
-        #if deltaE > 0:
+        # print("iteration", i, "deltaE", deltaE, "temp", round(temp))
+        # if deltaE > 0:
         #    print("chance of accepting worse is", math.e ** (-deltaE / temp))
         if deltaE < 0:
             # print("accepts better solution")
             incumbent = newSolution.copy()
-            betterCount += 1
+            better_count += 1
             if rand >= p1 + p2:
                 update_zeroindex(incumbent)
             if total_cost(incumbent) < total_cost(bestSolution):
                 bestSolution = incumbent.copy()
         elif random.random() < math.e ** (-deltaE / temp):
+            random_accepts_count += 1
             incumbent = newSolution.copy()
-            randomAccepts += 1
             if rand >= p1 + p2:
                 update_zeroindex(incumbent)
         temp = temp * a
-    print("\n annealing search best is ", total_cost(bestSolution))
-    print("infeasible", not_feasible, " random accepts", randomAccepts, "better neighbors", betterCount
-          , "no changes:", no_changes1, no_changes2, no_changes3)
+    random_accepts_list.append(random_accepts_count)
+    random_accepts_list.pop(0)
+    print("\nannealing search results:")
+    print("best objective is ", total_cost(bestSolution))
+    print("infeasible count:", not_feasible, " \nrandom accepts every 1000:\n", random_accepts_list)
+    print("better neighbors found:", better_count)
+    print("no changes by operator:", no_changes1, no_changes2, no_changes3)
     return bestSolution, total_cost(bestSolution)
 
 
@@ -318,7 +321,7 @@ def onlyPairs(solution):
         if call == 0:
             for c in count.keys():
                 if count[c] != 2:
-                    #print("call", c, "found ", count[c], "times")
+                    # print("call", c, "found ", count[c], "times")
                     return False
             count.clear()
             continue
@@ -327,7 +330,7 @@ def onlyPairs(solution):
         count[call] = count[call] + 1
     for c in count.keys():
         if count[c] != 2:
-            #print("call", c, "found ", count[c], "times")
+            # print("call", c, "found ", count[c], "times")
             return False
     return True
 
