@@ -20,9 +20,9 @@ def main():
 
 
 def test_annealing():
-    iterations = 5
-    data.readfile("data/Call_035_Vehicle_07.txt")  # 5M er best
-    # data.readfile("data/Call_7_Vehicle_3.txt")  # 5M er best
+    iterations = 3
+    data.readfile("data/Call_18_Vehicle_5.txt")  # 5M er best
+    #data.readfile("data/Call_7_Vehicle_3.txt")  # 5M er best
     sol, best, time = run_heuristic(annealingSetup, iterations, create_init_solution())
     print("\n\n annealing test result")
     print("avg", sum(sol) / iterations, "best", best, "time", round(time))
@@ -46,10 +46,11 @@ def run_heuristic(func, num_iterations, init_solution):
 
 def annealingSetup(init_solution):
     iterations = 10000
-    pMax = 0.6
+    pMax = 0.9
     pMin = 0.1
-    p1 = 0.4
+    p1 = 0.2
     p2 = 0.1
+    a = 0.995
     minDelta, maxDelta = getDeltaE()
     print("\n annealing setup")
     print(f'min and max deltas {round(minDelta)}, {round(maxDelta)}')
@@ -59,8 +60,6 @@ def annealingSetup(init_solution):
     t4 = -maxDelta / np.log(pMin)
     startTemp = max(t1, t2, t3, t4)
     endTemp = min(t1, t2, t3, t4)
-    # a = math.pow(startTemp / endTemp, 1 / iterations)
-    a = 0.99
     print("starttemp", round(startTemp), "endtemp", round(endTemp), "a", a)
     solution, objective = simulatedAnnealing(init_solution, p1, p2, startTemp, a, iterations)
     return solution, objective
@@ -75,17 +74,19 @@ def simulatedAnnealing(initSolution, p1, p2, tempStart, a, iterations=10000):
     :param a: cooling
     :param iterations: default 10k
     """
-    print("starts simulated annealing with p1:", p1, " p2:", p2, " start temp:", tempStart, " a:", a,
-          " i:", iterations)
     incumbent = initSolution.copy()
     bestSolution = initSolution.copy()
     temp = tempStart
+    feasible_list = []
     random_accepts_list = []
-    not_feasible, better_count, random_accepts_count, no_changes1, no_changes2, no_changes3 = 0, 0, 0, 0, 0, 0
+    better_count_list = []
+    not_feasible, better_count, random_accepts_count, no_changes1, no_changes2, no_changes3, feasible_count = 0, 0, 0, 0, 0, 0, 0
     for i in range(iterations):
         if i % 1000 == 0:
             random_accepts_list.append(random_accepts_count)
-            random_accepts_count = 0
+            better_count_list.append(better_count)
+            feasible_list.append(feasible_count)
+            better_count, random_accepts_count, feasible_count = 0, 0, 0
         rand = random.random()
         if rand < p1:
             newSolution = ops.twoExch(incumbent, data.num_vehicles)
@@ -96,6 +97,7 @@ def simulatedAnnealing(initSolution, p1, p2, tempStart, a, iterations=10000):
         if not is_feasible(newSolution):
             not_feasible += 1
             continue
+        feasible_count += 1
         totnew = total_cost(newSolution)
         totinc = total_cost(incumbent)
         if newSolution == incumbent:
@@ -107,9 +109,10 @@ def simulatedAnnealing(initSolution, p1, p2, tempStart, a, iterations=10000):
                 no_changes3 += 1
             continue
         deltaE = totnew - totinc
-        # print("iteration", i, "deltaE", deltaE, "temp", round(temp))
-        # if deltaE > 0:
-        #    print("chance of accepting worse is", math.e ** (-deltaE / temp))
+        if deltaE > 0:
+            #print("iteration", i, "deltaE", deltaE, "temp", round(temp))
+            #print("--- chance of accept is {:.1f} %".format(100*math.e ** (-deltaE / temp)))
+            pass
         if deltaE < 0:
             # print("accepts better solution")
             incumbent = newSolution.copy()
@@ -119,18 +122,22 @@ def simulatedAnnealing(initSolution, p1, p2, tempStart, a, iterations=10000):
             if total_cost(incumbent) < total_cost(bestSolution):
                 bestSolution = incumbent.copy()
         elif random.random() < math.e ** (-deltaE / temp):
-            random_accepts_count += 1
+            if deltaE != 0:
+                random_accepts_count += 1
             incumbent = newSolution.copy()
-            if rand >= p1 + p2:
-                update_zeroindex(incumbent)
         temp = temp * a
     random_accepts_list.append(random_accepts_count)
+    better_count_list.append(better_count)
+    feasible_list.append(feasible_count)
     random_accepts_list.pop(0)
+    better_count_list.pop(0)
+    feasible_list.pop(0)
     print("\nannealing search results:")
     print("best objective is ", total_cost(bestSolution))
-    print("infeasible count:", not_feasible, " \nrandom accepts every 1000:\n", random_accepts_list)
-    print("better neighbors found:", better_count)
     print("no changes by operator:", no_changes1, no_changes2, no_changes3)
+    print("feasible, better, random accepts")
+    for i in range(len(feasible_list)):
+        print('{:5}{:5}{:5}'.format(feasible_list[i], better_count_list[i], random_accepts_list[i]))
     return bestSolution, total_cost(bestSolution)
 
 
