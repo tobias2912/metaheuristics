@@ -1,11 +1,10 @@
 # from reader import Reader
 import math
 import random
-
 import numpy as np
 import time
-import src.operators as ops
-from src.reader import Reader
+import operators as ops
+from reader import Reader
 
 data = Reader()
 files = ["data/Call_7_Vehicle_3.txt", "data/Call_18_Vehicle_5.txt", "data/Call_035_Vehicle_07.txt",
@@ -25,6 +24,7 @@ def test_annealing():
     #data.readfile("data/Call_7_Vehicle_3.txt")  # 5M er best
     sol, best, time = run_heuristic(annealingSetup, iterations, create_init_solution())
     print("\n\n annealing test result")
+    return
     print("avg", sum(sol) / iterations, "best", best, "time", round(time))
 
 

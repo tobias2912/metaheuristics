@@ -80,7 +80,7 @@ class Reader:
         """
         map from (car num, call num) to:
         origin node time (in hours), origin node costs (in �), destination node time (in hours), destination node costs (in �)
-        time is -1 if not compatible
+        time is minus 1 if not compatible
         """
         return self.nodecost
 
