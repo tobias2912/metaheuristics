@@ -24,7 +24,6 @@ def test_annealing():
     #data.readfile("data/Call_7_Vehicle_3.txt")  # 5M er best
     sol, best, time = run_heuristic(annealingSetup, iterations, create_init_solution())
     print("\n\n annealing test result")
-    return
     print("avg", sum(sol) / iterations, "best", best, "time", round(time))
 
 
@@ -35,8 +34,8 @@ def run_heuristic(func, num_iterations, init_solution):
     solution_objectives = []
     bestTotal = total_cost(init_solution)
     start = time.time()
-    for i in range(num_iterations):
-        sol, total = func(init_solution)
+    for _ in range(num_iterations):
+        _, total = func(init_solution)
         if total < bestTotal:
             bestTotal = total
         solution_objectives.append(total)
@@ -50,7 +49,7 @@ def annealingSetup(init_solution):
     pMin = 0.1
     p1 = 0.2
     p2 = 0.1
-    a = 0.995
+    a = 0.997
     minDelta, maxDelta = getDeltaE()
     print("\n annealing setup")
     print(f'min and max deltas {round(minDelta)}, {round(maxDelta)}')
@@ -133,6 +132,7 @@ def simulatedAnnealing(initSolution, p1, p2, tempStart, a, iterations=10000):
     better_count_list.pop(0)
     feasible_list.pop(0)
     print("\nannealing search results:")
+    print("temperature ended at ",temp)
     print("best objective is ", total_cost(bestSolution))
     print("no changes by operator:", no_changes1, no_changes2, no_changes3)
     print("feasible, better, random accepts")

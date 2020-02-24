@@ -73,7 +73,7 @@ class Reader:
         return time
 
     def travelCost(self, vehicleNum, origin, dest):
-        time, cost = self.vertex[vehicleNum, origin, dest]
+        _, cost = self.vertex[vehicleNum, origin, dest]
         return cost
 
     def getNodes(self):
