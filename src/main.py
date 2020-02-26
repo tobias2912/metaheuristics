@@ -307,6 +307,9 @@ def sizeTimeLimit(solution):
 
         (origin, dest, size, _, lowerPickup, upperPickup, lowerDelivery, upperDelivery) = callsDict[call]
         firstVisit = call not in startedCalls
+        #compitable check
+        if not data.isCompatible(carIndex, call):
+            return False
         # capacity check
         if firstVisit:
             startedCalls.append(call)
