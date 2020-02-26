@@ -127,7 +127,7 @@
 78,11,27,9944,478760,897,969,897,1409
 79,33,35,11147,399953,198,270,198,717
 80,29,34,13502,545600,116,188,116,615
-% travel times and costs: vehicle, origin node, destination node, travel time (in minutes), travel cost (in €)
+% travel times and costs: vehicle, origin node, destination node, travel time (in minutes), travel cost (in )
 1,1,1,0,0
 2,1,1,0,0
 3,1,1,0,0
@@ -30548,7 +30548,7 @@
 18,39,39,0,0
 19,39,39,0,0
 20,39,39,0,0
-% node times and costs: vehicle, call, origin node time (in minutes), origin node costs (in €), destination node time (in minutes), destination node costs (in €)
+% node times and costs: vehicle, call, origin node time (in minutes), origin node costs (in ï¿½), destination node time (in minutes), destination node costs (in ï¿½)
 1,1,12,23893,18,33227
 1,2,21,24030,22,25418
 1,3,-1,-1,-1,-1

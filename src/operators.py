@@ -26,18 +26,7 @@ def twoExch(old_solution, nCars):
     for x in range(num_tries):
         solution = old_solution.copy()
         carNumber = math.ceil(random.random() * nCars)
-        carIndex = 1
-        found = False
-        #print("\ntries to swap car", carNumber)
-        for n, i in enumerate(solution):
-            if carIndex == carNumber and not found:
-                start = n
-                found = True
-            if i == 0:
-                carIndex += 1
-            if carIndex == carNumber + 1:
-                stop = n - 1
-                break
+        start, stop = get_car_index(carNumber, solution, nCars)
         if start == stop + 1 or start == stop - 1:
             # empty car or two calls in car
             if x == num_tries - 1:
@@ -70,18 +59,7 @@ def threeExch(old_solution, nCars):
     for x in range(num_tries):
         solution = old_solution.copy()
         carNumber = math.ceil(random.random() * nCars)
-        carIndex = 1
-        found = False
-        #print("\ntries to swap car", carNumber)
-        for n, i in enumerate(solution):
-            if carIndex == carNumber and not found:
-                start = n
-                found = True
-            if i == 0:
-                carIndex += 1
-            if carIndex == carNumber + 1:
-                stop = n - 1
-                break
+        start, stop = get_car_index(carNumber, solution, nCars)
         if start == stop + 1 or start == stop - 1:
             # empty car or two calls in car
             if x == num_tries - 1:
@@ -116,11 +94,28 @@ def oneReinsert(initSolution: list, nCars, nCalls):
     solution = initSolution.copy()
     call = math.ceil(nCalls * random.random())
     # remove call from first car(all cars)
-    assert call in solution
+    assert call in solution #, ("".join(solution) +" - " + str(call))
     solution.remove(call)
     solution.remove(call)
     # add randomly to new car
     carNumber = math.ceil(random.random() * (nCars + 1))
+    start, stop = get_car_index(carNumber, solution, nCars)
+    if start == stop + 1:
+        # empty car
+        solution.insert(start, call)
+        solution.insert(start, call)
+    else:
+        t1 = random.randint(start, stop)
+        t2 = random.randint(start, stop)
+        solution.insert(t1, call)
+        solution.insert(t2, call)
+    # print("inserted ", call, "at ", carNumber)
+    # update indexes
+    assert call != 0
+    return solution
+    
+
+def get_car_index(carNumber, solution, nCars):
     carIndex = 1
     found = False
     for n, i in enumerate(solution):
@@ -135,20 +130,8 @@ def oneReinsert(initSolution: list, nCars, nCalls):
         if carIndex == carNumber + 1:
             stop = n - 1
             break
-    if start == stop + 1:
-        # empty car
-        solution.insert(start, call)
-        solution.insert(start, call)
-    else:
-        t1 = random.randint(start, stop)
-        t2 = random.randint(start, stop)
-        solution.insert(t1, call)
-        solution.insert(t2, call)
-    # print("inserted ", call, "at ", carNumber)
-    # update indexes
-    assert call != 0
-    return solution
-
+    # TODO: can throw start referenced before assignment
+    return start, stop
 
 def threeExchRandom(oldSolution, nCars):
     solution = oldSolution.copy()
