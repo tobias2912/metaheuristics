@@ -8,11 +8,49 @@ zero_index = {}  # map from car number to index start. dummy car starts at Ncars
 
 
 def main():
-    init = [1, 1, 0, 2, 2, 3, 3, 0, 4, 4, 5, 5, 0, 6, 6, 7, 7]
-    new = oneReinsert(init, 3, 7)
+    init = [1, 1, 0, 2, 2, 3, 3, 0, 4, 4, 5, 5, 6, 6, 7, 7, 0]
+    new = flip_subpath(init, 3)
     print(init)
     print(new)
 
+
+def flip_subpath(old_solution, nCars):
+    """
+    swap two random numbers within one random car and flip order between
+    can return same solution
+    ! never swaps call between cars
+    maintains validity
+    :type old_solution: list
+    :return: new solution
+    """
+    for x in range(num_tries):
+        solution = old_solution.copy()
+        carNumber = math.ceil(random.random() * nCars)
+        start, stop = get_car_index(carNumber, solution, nCars)
+        if start == stop + 1 or start == stop - 1:
+            # empty car or two calls in car
+            if x == num_tries - 1:
+                return solution
+            continue
+        break
+    t1 = random.randint(start, stop)
+    t2 = random.randint(start, stop)
+    for _ in range(num_tries_index):
+        if solution[t1] != solution[t2]:
+            continue
+        else:
+            t2 = random.randint(start, stop)
+    # reverse between both numbers
+    path_start=min(t1, t2)
+    path_stop=max(t1, t2)
+    solution[path_start:path_stop] = solution[path_start:path_stop][::-1]
+
+    #temp = solution[t1]
+    #solution[t1] = solution[t2]
+    #solution[t2] = temp
+    #assert solution[t1] != 0 and solution[t2] != 0
+    #print("reverse between", t1,t2)
+    return solution
 
 def twoExch(old_solution, nCars):
     """
@@ -35,7 +73,7 @@ def twoExch(old_solution, nCars):
         break
     t1 = random.randint(start, stop)
     t2 = random.randint(start, stop)
-    for i in range(num_tries_index):
+    for _ in range(num_tries_index):
         if solution[t1] != solution[t2]:
             continue
         else:
@@ -70,7 +108,7 @@ def threeExch(old_solution, nCars):
     t1 = random.randint(start, stop)
     t2 = random.randint(start, stop)
     t3 = random.randint(start, stop)
-    for i in range(num_tries_index*2):
+    for _ in range(num_tries_index*2):
         if t1 != t2 and t2 != t3 and t1 != t3:
             continue
         else:
@@ -179,7 +217,7 @@ def twoExchFast(oldSolution, nCars):
     t2 = random.randint(start, stop)
     assert solution[t1] != 0, (t1, t2)
     assert solution[t2] != 0, (t1, t2)
-    for i in range(5):
+    for _ in range(5):
         if solution[t1] != solution[t2]:
             continue
         else:
@@ -207,7 +245,7 @@ def threeExchFast(old_solution, nCars):
     t1 = random.randint(start, stop)
     t2 = random.randint(start, stop)
     t3 = random.randint(start, stop)
-    for i in range(3):
+    for _ in range(3):
         if solution[t1] != solution[t2] and solution[t2] != solution[t3]:
             continue
         else:

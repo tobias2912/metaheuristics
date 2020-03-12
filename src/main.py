@@ -1,20 +1,23 @@
-# from reader import Reader
 import math
 import random
 import numpy as np
 import time
 import operators as ops
+from feasibility import Feasibility
 from reader import Reader
-
 data = Reader()
+feasibel = Feasibility(data)
+
+
 files = ["data/Call_7_Vehicle_3.txt", "data/Call_18_Vehicle_5.txt", "data/Call_035_Vehicle_07.txt",
          "data/Call_080_Vehicle_20.txt", "data/Call_130_Vehicle_40.txt"]
 
 
 def main():
     #data.readfile("data/Call_7_Vehicle_3.txt")  # 5M er best
-    #test_annealing()
-    test_all()
+    test_annealing()
+    
+    #test_all()
     #data.readfile("data/Call_035_Vehicle_07.txt")  # 5M er best
 
 
@@ -54,8 +57,8 @@ def annealingSetup(init_solution):
     iterations = 10000
     pMax = 0.9
     pMin = 0.1
-    p1 = 0.05
-    p2 = 0.1
+    p1 = 0.1
+    p2 = 0.2
     a = 0.9985
     minDelta, maxDelta = getDeltaE()
     #print("\n annealing setup")
@@ -65,7 +68,7 @@ def annealingSetup(init_solution):
     t3 = -minDelta / np.log(pMin)
     t4 = -maxDelta / np.log(pMin)
     startTemp = max(t1, t2, t3, t4)
-    endTemp = min(t1, t2, t3, t4)
+    #endTemp = min(t1, t2, t3, t4)
     #print("starttemp", round(startTemp), "endtemp", round(endTemp), "a", a)
     solution, objective = simulatedAnnealing(init_solution, p1, p2, startTemp, a, iterations)
     return solution, objective
@@ -101,12 +104,13 @@ def simulatedAnnealing(initSolution, p1, p2, tempStart, a, iterations=10000):
             if rand < p1:
                 newSolution = ops.twoExch(incumbent, data.num_vehicles)
             elif rand < p1 + p2:
-                newSolution = ops.threeExch(incumbent, data.num_vehicles)
+                newSolution = ops.flip_subpath(incumbent, data.num_vehicles)
             else:
                 newSolution = ops.oneReinsert(incumbent, data.num_vehicles, data.num_calls)
-            if is_feasible(newSolution):
+            if feasibel.is_feasible(newSolution):
                 break
-        if not is_feasible(newSolution):
+            
+        if not feasibel.is_feasible(newSolution):
             continue
         feasible_count += 1
         if newSolution == incumbent:
@@ -210,7 +214,7 @@ def update_zeroindex(incumbent):
 
 def local_search(init_solution, p1=0.3, p2=0.3, iterations=10000):
     best_solution = init_solution.copy()
-    for n in range(iterations):
+    for _ in range(iterations):
         rand = ops.random.random()
         if rand < p1:
             current = ops.twoExch(best_solution, data.num_vehicles)
@@ -218,7 +222,7 @@ def local_search(init_solution, p1=0.3, p2=0.3, iterations=10000):
             current = ops.threeExch(best_solution, data.num_vehicles)
         else:
             current = ops.oneReinsert(best_solution, data.num_vehicles, data.num_calls)
-        if is_feasible(current) and total_cost(current) < total_cost(best_solution):
+        if feasibel.is_feasible(current) and total_cost(current) < total_cost(best_solution):
             best_solution = current
     # print("localsearch best is ", totalCost(best_solution), " - ", best_solution)
     return best_solution, total_cost(best_solution)
@@ -226,17 +230,13 @@ def local_search(init_solution, p1=0.3, p2=0.3, iterations=10000):
 
 def random_search(initSolution, iterations=10000):
     bestSolution = initSolution.copy()
-    for i in range(iterations):
+    for _ in range(iterations):
         currentSolution = generateRandom()
-        if is_feasible(currentSolution) and total_cost(currentSolution) < total_cost(bestSolution):
+        if feasibel.is_feasible(currentSolution) and total_cost(currentSolution) < total_cost(bestSolution):
             bestSolution = currentSolution
     # print("randomsearch best is", totalCost(bestSolution), " - ", bestSolution)
     # assert len(initSolution) == data.numCalls * 2 + data.num_vehicles
     return bestSolution, total_cost(bestSolution)
-
-
-def is_feasible(solution):
-    return onlyPairs(solution) and sizeTimeLimit(solution)
 
 
 def total_cost(solution):
@@ -266,7 +266,7 @@ def total_cost(solution):
             curNode, _, _ = vehicleDict[carIndex]
             continue
 
-        (origin, dest, size, failCost, _, _, _, _) = callsDict[call]
+        (origin, dest, _, failCost, _, _, _, _) = callsDict[call]
         _, originCost, _, destCost = nodeDict[(carIndex, call)]
         if call not in startedCalls:
             startedCalls.append(call)
@@ -282,88 +282,6 @@ def total_cost(solution):
     return curCost
 
 
-def sizeTimeLimit(solution):
-    vehicleDict = data.getVehiclesDict()
-    vertexDict = data.getVertexDict()
-    callsDict = data.getCallsDict()
-    nodeDict = data.getNodes()
-    home, curTime, cap = vehicleDict[1]
-    curNode = home
-    carIndex = 1
-    curWeight = 0
-    maxWeight = cap
-    startedCalls = []
-
-    for call in solution:
-        if call == 0:
-            carIndex = carIndex + 1
-            if carIndex >= data.num_vehicles + 1:
-                # dummy car
-                return True
-            startedCalls = []
-            curWeight = 0
-            curNode, curTime, maxWeight = vehicleDict[carIndex]
-            continue
-
-        (origin, dest, size, _, lowerPickup, upperPickup, lowerDelivery, upperDelivery) = callsDict[call]
-        firstVisit = call not in startedCalls
-        #compitable check
-        if not data.isCompatible(carIndex, call):
-            return False
-        # capacity check
-        if firstVisit:
-            startedCalls.append(call)
-            curWeight = curWeight + size
-            if curWeight > maxWeight:
-                return False
-        else:
-            startedCalls.remove(call)
-            curWeight = curWeight - size
-        # time check
-        if firstVisit:
-            nextNode = origin
-        else:
-            nextNode = dest
-        travelTime, _ = vertexDict[(carIndex, curNode, nextNode)]
-        originTime, _, destTime, _ = nodeDict[(carIndex, call)]
-        curTime += travelTime
-        if firstVisit:  # pickup
-            if curTime < lowerPickup:
-                # wait for pickup
-                curTime = lowerPickup
-            curTime += originTime
-            if upperPickup < curTime:
-                return False
-        else:
-            #delivery
-            if curTime < lowerDelivery:
-                curTime = lowerDelivery
-            curTime += destTime
-            if upperDelivery < curTime:
-                return False
-        curNode = nextNode
-    return True
-
-
-def onlyPairs(solution):
-    count = {}
-    for call in solution:
-        if call == 0:
-            for c in count.keys():
-                if count[c] != 2:
-                    # print("call", c, "found ", count[c], "times")
-                    return False
-            count.clear()
-            continue
-        if count.get(call) is None:
-            count[call] = 0
-        count[call] = count[call] + 1
-    for c in count.keys():
-        if count[c] != 2:
-            # print("call", c, "found ", count[c], "times")
-            return False
-    return True
-
 
 def generateSolution():
     """
@@ -376,7 +294,7 @@ def generateSolution():
         current_time = start
         current_node = home
         current_capacity = 0
-        for callN, origin, dest, size, cost, lowerPickup, upperPickup, lowerDel, upperDel in data.getCalls():
+        for callN, origin, dest, size, _, lowerPickup, upperPickup, lowerDel, upperDel in data.getCalls():
             if data.isCompatible(carN, callN) and callN in free_calls and current_capacity + size <= cap:
                 # time constraint
                 pickuptime = current_time + \
