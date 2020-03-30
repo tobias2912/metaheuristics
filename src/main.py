@@ -16,7 +16,7 @@ files = ["data/Call_7_Vehicle_3.txt", "data/Call_18_Vehicle_5.txt", "data/Call_0
 
 
 def main():
-    # test_annealing()
+    #test_annealing()
     benchmark()
     # test_all()
     #data.readfile("data/Call_7_Vehicle_3.txt")  # 2,5M er best
@@ -33,20 +33,20 @@ def benchmark():
         # annealing
         annealing_solutions, best_total, runtime, best_solution = run_heuristic(annealing_setup, num_iterations,
                                                                                 init_solution)
+        print("total: ", best_total)
         improvements.append(round(100 * (init_total - best_total) / init_total))
     print("avg improvement: ", round(100 * (init_total - best_total) / init_total))
 
 def test_annealing():
-    iterations = 3
+    iterations = 1
     # data.readfile("data/Call_7_Vehicle_3.txt")  # 14 er best
     # data.readfile("data/Call_18_Vehicle_5.txt")  # 2,5M er best
-    data.readfile("data/Call_035_Vehicle_07.txt")  # 5M er best
+    # data.readfile("data/Call_035_Vehicle_07.txt")  # 5M er best
     # data.readfile("data/Call_080_Vehicle_20.txt")  # 13M er best
-    # data.readfile("data/Call_130_Vehicle_40.txt")  # 13M er best
-
-    sol, best, time, best_solution = run_heuristic(annealing_setup, iterations, create_init_solution())
+    data.readfile("data/Call_130_Vehicle_40.txt")  # 13M er best
+    sol, best, runtime, best_solution = run_heuristic(annealing_setup, iterations, create_init_solution())
     print("\n\n annealing test result")
-    print("avg {} best {} time {:.3}".format(round(sum(sol) / iterations), best, time))
+    print("avg {} best {} time {:.3}".format(round(sum(sol) / iterations), best, runtime))
     print(best_solution)
 
 
@@ -75,7 +75,7 @@ def annealing_setup(init_solution):
     a = 0.9984
     operators = \
         [(ops.greedy_two_exchange, 10), (ops.one_reinsert, 150), (ops.two_exch, 10), (ops.threeExch, 1),
-                 (ops.assign_unused_call, 3), (ops.reduce_wait_two_ex, 1), (ops.greedy_one_reinsert, 10)]
+                 (ops.assign_unused_call, 0), (ops.reduce_wait_two_ex, 1), (ops.greedy_one_reinsert, 20)]
     minDelta, maxDelta = get_delta_e()
     t1 = -minDelta / np.log(pMax)
     t2 = -maxDelta / np.log(pMax)

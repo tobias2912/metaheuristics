@@ -204,6 +204,7 @@ def __most_expensive_node(solution, data: Reader):
 
         (origin, dest, _, failCost, _, _, _, _) = callsDict[call]
         _, origin_cost, _, dest_cost = nodeDict[(car_index, call)]
+        # todo: kanskje bedre å bare ha travelcost og ikke nodecost, fordi nodecost må uansett betales
         if call not in started_calls:
             started_calls.append(call)
             cur_cost = origin_cost
