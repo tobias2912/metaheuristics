@@ -238,6 +238,7 @@ def __most_expensive_node_car(car_number, solution, data: Reader):
     record_index = 0
     start, stop = __get_car_index(car_number, solution, data.num_vehicles)
     for index, call in enumerate(solution[start:stop + 1]):
+        assert call is not 0
         (origin, dest, _, failCost, _, _, _, _) = callsDict[call]
         _, origin_cost, _, dest_cost = nodeDict[(car_index, call)]
         if call not in started_calls:
@@ -254,7 +255,8 @@ def __most_expensive_node_car(car_number, solution, data: Reader):
         if cur_cost > record_cost:
             record_cost = cur_cost
             record_index = index
-    return record_index
+    assert solution[record_index + start] == solution[start:stop+1][record_index]
+    return record_index + start
 
 
 def most_consuming_node(solution, data: Reader, car_number):
@@ -360,15 +362,17 @@ def greedy_one_reinsert(init_solution, data: Reader, feasibel: Feasibility):
         return solution
     index = __most_expensive_node_car(car_number, solution, data)
     call = solution[index]
-    solution.remove(call)
-    solution.remove(call)
     record_solution = None
     record_score = None
+    assert(call is not 0)
+    solution.remove(call)
+    solution.remove(call)
     # add call to best car
     for _ in range(num_tries):
         new_sol = solution.copy()
         car_number = math.ceil(random.random() * (data.num_vehicles + 1))
         start, stop = __get_car_index(car_number, solution, data.num_vehicles)
+
         if start == stop + 1:
             # empty car
             new_sol.insert(start, call)
@@ -381,7 +385,6 @@ def greedy_one_reinsert(init_solution, data: Reader, feasibel: Feasibility):
         if feasibel.is_feasible(new_sol):
             cost = feasibel.total_cost(new_sol)
             if record_score is None or cost < record_score:
-                print(new_sol)
                 record_score = cost
                 record_solution = new_sol
     if record_solution is not None:
@@ -474,7 +477,7 @@ def one_reinsert(init_solution: list, data: Reader, feasible):
     solution = init_solution.copy()
     call = math.ceil(n_calls * random.random())
     # remove call from first car(all cars)
-    assert call in solution  # , ("".join(solution) +" - " + str(call))
+    assert call in solution
     solution.remove(call)
     solution.remove(call)
     # add randomly to new car or dummy
@@ -517,6 +520,7 @@ def __get_car_index(car_number, solution, num_cars):
             if car_counter == car_number + 1:
                 stop = index - 1
                 return start, stop
+    raise Exception("index faile", solution)
 
 
 if __name__ == '__main__':

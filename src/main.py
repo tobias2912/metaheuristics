@@ -13,19 +13,34 @@ files = ["data/Call_7_Vehicle_3.txt", "data/Call_18_Vehicle_5.txt", "data/Call_0
          "data/Call_080_Vehicle_20.txt", "data/Call_130_Vehicle_40.txt"]
 
 
+
+
 def main():
-    test_annealing()
+    # test_annealing()
+    benchmark()
     # test_all()
     #data.readfile("data/Call_7_Vehicle_3.txt")  # 2,5M er best
     #init = [3, 3, 0, 7, 1, 7, 1, 0, 5, 5, 6, 6, 0, 4, 2, 4, 2]
     #print(ops.greedy_one_reinsert(init, data, feasibel))
 
+def benchmark():
+    num_iterations = 1
+    improvements = []
+    for file in files[1:4]:
+        data.readfile(file)
+        init_solution = create_init_solution()
+        init_total = feasibel.total_cost(init_solution)
+        # annealing
+        annealing_solutions, best_total, runtime, best_solution = run_heuristic(annealing_setup, num_iterations,
+                                                                                init_solution)
+        improvements.append(round(100 * (init_total - best_total) / init_total))
+    print("avg improvement: ", round(100 * (init_total - best_total) / init_total))
 
 def test_annealing():
-    iterations = 5
+    iterations = 3
     # data.readfile("data/Call_7_Vehicle_3.txt")  # 14 er best
-    data.readfile("data/Call_18_Vehicle_5.txt")  # 2,5M er best
-    # data.readfile("data/Call_035_Vehicle_07.txt")  # 5M er best
+    # data.readfile("data/Call_18_Vehicle_5.txt")  # 2,5M er best
+    data.readfile("data/Call_035_Vehicle_07.txt")  # 5M er best
     # data.readfile("data/Call_080_Vehicle_20.txt")  # 13M er best
     # data.readfile("data/Call_130_Vehicle_40.txt")  # 13M er best
 
@@ -58,11 +73,10 @@ def annealing_setup(init_solution):
     pMax = 0.9
     pMin = 0.1
     a = 0.9984
-    operators = [(ops.greedy_two_exchange, 20), (ops.one_reinsert, 100), (ops.two_exch, 10), (ops.threeExch, 1),
-                 (ops.assign_unused_call, 3), (ops.reduce_wait_two_ex, 1)]
+    operators = \
+        [(ops.greedy_two_exchange, 10), (ops.one_reinsert, 150), (ops.two_exch, 10), (ops.threeExch, 1),
+                 (ops.assign_unused_call, 3), (ops.reduce_wait_two_ex, 1), (ops.greedy_one_reinsert, 10)]
     minDelta, maxDelta = get_delta_e()
-    # print("\n annealing setup")
-    # print(f'min and max deltas {round(minDelta)}, {round(maxDelta)}')
     t1 = -minDelta / np.log(pMax)
     t2 = -maxDelta / np.log(pMax)
     t3 = -minDelta / np.log(pMin)
