@@ -16,7 +16,6 @@ def main():
     start, stop = (__get_car_index2(init, 1, 4))
 
 
-
 """
 all operators in format op(incumbent, data, feasibel
 """
@@ -222,6 +221,42 @@ def __most_expensive_node(solution, data: Reader):
     return record_index
 
 
+def __most_expensive_node_car(car_number, solution, data: Reader):
+    """
+        take node with highest travel and delivery cost in a car
+        Returns: index of node in solution
+    """
+    vehicleDict = data.getVehiclesDict()
+    vertexDict = data.getVertexDict()
+    callsDict = data.getCallsDict()
+    nodeDict = data.getNodes()
+    home, _, _ = vehicleDict[car_number]
+    cur_node = home
+    car_index = car_number
+    started_calls = []
+    record_cost = 0
+    record_index = 0
+    start, stop = __get_car_index(car_number, solution, data.num_vehicles)
+    for index, call in enumerate(solution[start:stop + 1]):
+        (origin, dest, _, failCost, _, _, _, _) = callsDict[call]
+        _, origin_cost, _, dest_cost = nodeDict[(car_index, call)]
+        if call not in started_calls:
+            started_calls.append(call)
+            cur_cost = origin_cost
+            next_node = origin
+        else:
+            started_calls.remove(call)
+            cur_cost = dest_cost
+            next_node = dest
+        _, travel_cost = vertexDict[(car_index, cur_node, next_node)]
+        cur_cost = cur_cost + travel_cost
+        cur_node = next_node
+        if cur_cost > record_cost:
+            record_cost = cur_cost
+            record_index = index
+    return record_index
+
+
 def most_consuming_node(solution, data: Reader, car_number):
     """
     cost of node evenly based on time spent and money
@@ -280,7 +315,7 @@ def assign_unused_call(init_solution, data: Reader, feasible):
     assign most expensive dummy call to random vehicle
     """
     # find most expensive
-    init_solution=init_solution.copy()
+    init_solution = init_solution.copy()
     call_dict = data.getCallsDict()
     record_cost = 0
     record_call = None
@@ -314,35 +349,45 @@ def assign_unused_call(init_solution, data: Reader, feasible):
     return init_solution
 
 
-def greedy_one_reinsert(init_solution, data: Reader, feasibel):
+def greedy_one_reinsert(init_solution, data: Reader, feasibel: Feasibility):
     """
-    swap a random call to new random car
-    insert into best objective value
+    in random car (not dummy), remove most expensive call. insert into best solution
     """
-
     solution = init_solution.copy()
-    call = math.ceil(data.num_calls * random.random())
-    # remove call from first car(all cars)
-    assert call in solution, ("".join(solution) + " - " + str(call))
+    # remove call from random car
+    start, stop, car_number = __get_nonempty_car(solution, data)
+    if car_number is None:
+        return solution
+    index = __most_expensive_node_car(car_number, solution, data)
+    call = solution[index]
     solution.remove(call)
     solution.remove(call)
-    # add randomly to new car
-    car_number = math.ceil(random.random() * (data.num_vehicles + 1))
-    start, stop = __get_car_index(car_number, solution, data.num_vehicles)
-    # TODO: add best check
-    if start == stop + 1:
-        # empty car
-        solution.insert(start, call)
-        solution.insert(start, call)
+    record_solution = None
+    record_score = None
+    # add call to best car
+    for _ in range(num_tries):
+        new_sol = solution.copy()
+        car_number = math.ceil(random.random() * (data.num_vehicles + 1))
+        start, stop = __get_car_index(car_number, solution, data.num_vehicles)
+        if start == stop + 1:
+            # empty car
+            new_sol.insert(start, call)
+            new_sol.insert(start, call)
+        else:
+            t1 = random.randint(start, stop)
+            t2 = random.randint(start, stop)
+            new_sol.insert(t1, call)
+            new_sol.insert(t2, call)
+        if feasibel.is_feasible(new_sol):
+            cost = feasibel.total_cost(new_sol)
+            if record_score is None or cost < record_score:
+                print(new_sol)
+                record_score = cost
+                record_solution = new_sol
+    if record_solution is not None:
+        return record_solution
     else:
-        t1 = random.randint(start, stop)
-        t2 = random.randint(start, stop)
-        solution.insert(t1, call)
-        solution.insert(t2, call)
-    # print("inserted ", call, "at ", carNumber)
-    # update indexes
-    assert call != 0
-    return solution
+        return init_solution
 
 
 def two_exch(old_solution, data, feasibel):
@@ -472,33 +517,6 @@ def __get_car_index(car_number, solution, num_cars):
             if car_counter == car_number + 1:
                 stop = index - 1
                 return start, stop
-
-
-def __get_car_index2(car_number, solution, num_cars):
-    """
-    deprecated
-    """
-    assert 1 <= car_number <= num_cars + 1
-    carIndex = 1
-    start = None
-    found = False
-    for n, i in enumerate(solution):
-        if carIndex == car_number and not found:
-            start = n
-            found = True
-            if car_number == num_cars + 1:
-                # there is no stop 0
-                stop = len(solution)
-        if i == 0:
-            carIndex += 1
-        if carIndex == car_number + 1:
-            stop = n - 1
-            break
-    # TODO: terrible stuff
-    if start is None:
-        # return len(solution), len(solution)+1
-        raise BaseException(solution, car_number, num_cars)
-    return start, stop
 
 
 if __name__ == '__main__':

@@ -27,24 +27,6 @@ class Feasibility:
                     stop = index - 1
                     return start, stop
 
-    @staticmethod
-    def get_car_index2(carNumber, solution, nCars):
-        carIndex = 1
-        found = False
-        for n, i in enumerate(solution):
-            if carIndex == carNumber and not found:
-                start = n
-                found = True
-                if carNumber == nCars + 1:
-                    # there is no stop 0
-                    stop = len(solution)
-            if i == 0:
-                carIndex += 1
-            if carIndex == carNumber + 1:
-                stop = n - 1
-                break
-        # TODO: can throw start referenced before assignment
-        return start, stop
 
     def __is_feasible_car(self, solution, carN):
         """

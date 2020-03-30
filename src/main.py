@@ -18,11 +18,11 @@ def main():
     # test_all()
     #data.readfile("data/Call_7_Vehicle_3.txt")  # 2,5M er best
     #init = [3, 3, 0, 7, 1, 7, 1, 0, 5, 5, 6, 6, 0, 4, 2, 4, 2]
-    #print(ops.assign_unused_call(init, data, feasibel))
+    #print(ops.greedy_one_reinsert(init, data, feasibel))
 
 
 def test_annealing():
-    iterations = 3
+    iterations = 5
     # data.readfile("data/Call_7_Vehicle_3.txt")  # 14 er best
     data.readfile("data/Call_18_Vehicle_5.txt")  # 2,5M er best
     # data.readfile("data/Call_035_Vehicle_07.txt")  # 5M er best
@@ -58,8 +58,8 @@ def annealing_setup(init_solution):
     pMax = 0.9
     pMin = 0.1
     a = 0.9984
-    operators = [(ops.greedy_two_exchange, 30), (ops.one_reinsert, 100), (ops.two_exch, 10), (ops.threeExch, 5),
-                 (ops.assign_unused_call, 3), (ops.reduce_wait_two_ex, 5)]
+    operators = [(ops.greedy_two_exchange, 20), (ops.one_reinsert, 100), (ops.two_exch, 10), (ops.threeExch, 1),
+                 (ops.assign_unused_call, 3), (ops.reduce_wait_two_ex, 1)]
     minDelta, maxDelta = get_delta_e()
     # print("\n annealing setup")
     # print(f'min and max deltas {round(minDelta)}, {round(maxDelta)}')
@@ -106,14 +106,8 @@ def simulated_annealing(init_solution, temp_start, a, operators, iterations=1000
             counter.inc_no_changes()
             continue
         delta_e = feasibel.total_cost(new_solution) - feasibel.total_cost(incumbent)
-        if delta_e > 0:
-            # print("iteration", i, "deltaE", deltaE, "temp", round(temp))
-            # print("--- chance of accept is {:.1f} %".format(100*math.e ** (-deltaE / temp)))
-            pass
         if delta_e < 0:
-            # print("accepts better solution")
             incumbent = new_solution.copy()
-
             counter.inc_better()
             if feasibel.total_cost(incumbent) < feasibel.total_cost(best_solution):
                 counter.inc_record()
