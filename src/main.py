@@ -14,10 +14,11 @@ files = ["data/Call_7_Vehicle_3.txt", "data/Call_18_Vehicle_5.txt", "data/Call_0
 
 
 def main():
-    # data.readfile("data/Call_7_Vehicle_3.txt")  # 5M er best
     test_annealing()
     # test_all()
-    # data.readfile("data/Call_035_Vehicle_07.txt")  # 5M er best
+    #data.readfile("data/Call_7_Vehicle_3.txt")  # 2,5M er best
+    #init = [3, 3, 0, 7, 1, 7, 1, 0, 5, 5, 6, 6, 0, 4, 2, 4, 2]
+    #print(ops.assign_unused_call(init, data, feasibel))
 
 
 def test_annealing():
@@ -26,6 +27,7 @@ def test_annealing():
     data.readfile("data/Call_18_Vehicle_5.txt")  # 2,5M er best
     # data.readfile("data/Call_035_Vehicle_07.txt")  # 5M er best
     # data.readfile("data/Call_080_Vehicle_20.txt")  # 13M er best
+    # data.readfile("data/Call_130_Vehicle_40.txt")  # 13M er best
 
     sol, best, time, best_solution = run_heuristic(annealing_setup, iterations, create_init_solution())
     print("\n\n annealing test result")
@@ -48,15 +50,16 @@ def run_heuristic(func, num_iterations, init_solution):
             best_sol = sol
         solution_objectives.append(total)
     end = time.time()
-    return solution_objectives, bestTotal, end - start, best_sol
+    return solution_objectives, bestTotal, (end - start) / num_iterations, best_sol
 
 
 def annealing_setup(init_solution):
     iterations = 10000
     pMax = 0.9
     pMin = 0.1
-    a = 0.9985
-    operators = [(ops.greedy_two_exchange, 2), (ops.one_reinsert, 9), (ops.two_exch, 1), (ops.threeExch, 1)]
+    a = 0.9984
+    operators = [(ops.greedy_two_exchange, 30), (ops.one_reinsert, 100), (ops.two_exch, 10), (ops.threeExch, 5),
+                 (ops.assign_unused_call, 3), (ops.reduce_wait_two_ex, 5)]
     minDelta, maxDelta = get_delta_e()
     # print("\n annealing setup")
     # print(f'min and max deltas {round(minDelta)}, {round(maxDelta)}')
@@ -77,11 +80,12 @@ def simulated_annealing(init_solution, temp_start, a, operators, iterations=1000
     :param temp_start: start temperature
     :param a: cooling
     :param iterations: default 10k
+    :param operators: list of (operator, weight)
     """
     incumbent = init_solution.copy()
     best_solution = init_solution.copy()
     temp = temp_start
-    counter = Counter()
+    counter = Counter(operators)
     for i in range(iterations):
         if i % 1000 == 0:
             counter.update()
@@ -91,9 +95,13 @@ def simulated_annealing(init_solution, temp_start, a, operators, iterations=1000
             new_solution = current_operator(incumbent, data, feasibel)
             if feasibel.is_feasible(new_solution):
                 break
+
         if not feasibel.is_feasible(new_solution):
+            counter.update_infeasible_operator(current_operator)
             continue
-        counter.inc_feasible()
+        else:
+            counter.inc_feasible()
+
         if new_solution == incumbent:
             counter.inc_no_changes()
             continue
@@ -123,6 +131,7 @@ def simulated_annealing(init_solution, temp_start, a, operators, iterations=1000
     # print("no changes by operator:", no_changes1, no_changes2, no_changes3)
 
     print(counter)
+    counter.print_not_feasible_operators()
     return best_solution, feasibel.total_cost(best_solution)
 
 
@@ -190,13 +199,19 @@ class Counter:
     better_count_list = []
     record_list = []
 
-    def __init__(self):
+    def __init__(self, operators):
         self.better_count, self.random_accepts_count, self.no_changes1, self.no_changes2 = 0, 0, 0, 0
         self.no_changes3, self.feasible_count, self.record_count = 0, 0, 0
         self.feasible_list = []
         self.random_accepts_list = []
         self.better_count_list = []
         self.record_list = []
+        self.not_feasible_operators = {}
+        for op, w in operators:
+            self.not_feasible_operators[op.__name__] = 0
+
+    def update_infeasible_operator(self, operator):
+        self.not_feasible_operators[operator.__name__] = self.not_feasible_operators[operator.__name__] + 1
 
     def update(self):
         self.random_accepts_list.append(self.random_accepts_count)
@@ -236,6 +251,10 @@ class Counter:
             out += ('   {:6}{:6}{:6}{:6}\n'.format(self.feasible_list[i], self.better_count_list[i],
                                                    self.random_accepts_list[i], self.record_list[i]))
         return out
+
+    def print_not_feasible_operators(self):
+        print("operators amount not feasible")
+        print(self.not_feasible_operators)
 
 
 def create_init_solution():

@@ -3,8 +3,32 @@ class Feasibility:
     def __init__(self, data):
         self.data = data
 
+
+    def __get_car_index(self, car_number, solution, num_cars):
+        """
+            all call indices start <= i <= stop are part of car
+            loop with solution[start:stop+1]
+            Returns: (start, stop)
+        """
+        if car_number == num_cars + 1:
+            # dummy car
+            sol = solution.copy()
+            start, stop = self.__get_car_index(1, sol[::-1], num_cars)
+            return len(solution) - stop - 1, len(solution) + 1
+        # find start
+        car_counter = 1
+        start = 0
+        for index, call in enumerate(solution):
+            if call == 0:
+                car_counter += 1
+                if car_counter == car_number:
+                    start = index + 1
+                if car_counter == car_number + 1:
+                    stop = index - 1
+                    return start, stop
+
     @staticmethod
-    def get_car_index(carNumber, solution, nCars):
+    def get_car_index2(carNumber, solution, nCars):
         carIndex = 1
         found = False
         for n, i in enumerate(solution):

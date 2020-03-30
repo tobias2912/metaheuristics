@@ -57,7 +57,7 @@ class Reader:
 
     def getCallsDict(self):
         """
-        map form index => origin, destination, size, fail cost, lowerbound time pickup , upperbound time pickup, lowerbound time delivery, upperbuond time delivery
+        map form callNumber => origin, destination, size, fail cost, lowerbound time pickup , upperbound time pickup, lowerbound time delivery, upperbuond time delivery
         :return: dict
         """
         return self.callsDict
