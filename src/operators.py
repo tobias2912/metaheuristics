@@ -5,9 +5,9 @@ from os import error
 from feasibility import Feasibility
 from reader import Reader
 
-num_tries = 8  # number of tries to repeat Exch to get diff result
-num_tries_index = 8  # number of tries to repeat Exch to get diff result
-brute_force_limit = 6
+num_tries = 10  # number of tries to repeat Exch to get diff result
+num_tries_index = 10  # number of tries to repeat Exch to get diff result
+brute_force_limit = 10
 
 
 def main():
@@ -49,7 +49,7 @@ def similar_two_exchange(solution, data, feasibel):
 
 def reduce_wait_two_ex(solution, data, feasibel):
     """
-    in random non empty car, select node and swap with similar
+    in random non empty car, select most waqited node and swap with best
     """
     start, stop, car_number = __get_nonempty_car(solution, data)
     if car_number is None:

@@ -13,15 +13,15 @@ files = ["data/Call_7_Vehicle_3.txt", "data/Call_18_Vehicle_5.txt", "data/Call_0
          "data/Call_080_Vehicle_20.txt", "data/Call_130_Vehicle_40.txt"]
 
 operators = \
-    [(ops.greedy_two_exchange,112),(ops.one_reinsert,1400),(ops.two_exch,118),(ops.threeExch,10),(ops.assign_unused_call,262),
-     (ops.reduce_wait_two_ex,10),(ops.greedy_one_reinsert,400)]
+    [(ops.greedy_two_exchange, 92), (ops.one_reinsert, 1400), (ops.two_exch, 98), (ops.threeExch, 0),
+     (ops.assign_unused_call, 242), (ops.reduce_wait_two_ex, 4), (ops.greedy_one_reinsert, 400)]
 
 
 def main():
-    automate_weights()
+    # automate_weights()
     # test_annealing()
     # benchmark()
-    # test_all()
+    test_all()
     # data.readfile("data/Call_7_Vehicle_3.txt")  # 2,5M er best
     # init = [3, 3, 0, 0, 1, 1, 6, 6, 0, 4, 2, 4, 2, 5, 5]
     # print("\n", ops.assign_unused_call(init, data, feasibel))
@@ -29,10 +29,10 @@ def main():
 
 def automate_weights():
     cur_ops = operators.copy()
-    iterations = 200
-    record_improvment = 60
+    iterations = 100
+    record_improvment = 62
     for tries in range(1, iterations):
-        change = 10 + round((iterations - tries) / 20)
+        change = 2 + round((iterations - tries) / 20)
         print("start nr ", tries, "     change:", change)
         op_num = random.randint(0, len(cur_ops) - 1)
         o, w, = cur_ops[op_num]
@@ -67,7 +67,7 @@ def automate_weights():
 def __print_operators(op_list):
     out = ""
     for op, we in op_list:
-        out += ("(ops." + op.__name__ + "," +str(we) + "),")
+        out += ("(ops." + op.__name__ + "," + str(we) + "),")
     print(out)
 
 
@@ -214,17 +214,16 @@ def test_all():
         init_solution = create_init_solution()
         init_total = feasibel.total_cost(init_solution)
         # random
-        random_solutions, best_total, runtime, best_solution = run_heuristic(random_search, num_iterations,
-                                                                             init_solution)
-        print("random search avg: ", sum(random_solutions) / num_iterations, "best", best_total)
-        print("improvement:", round(100 * (init_total - best_total) / init_total), " time: ", round(runtime))
+        #random_solutions, best_total, runtime, best_solution = run_heuristic(random_search, num_iterations,
+        #                                                                     init_solution)
+        #print("random search avg: ", sum(random_solutions) / num_iterations, "best", best_total)
+        #print("improvement:", round(100 * (init_total - best_total) / init_total), " time: ", round(runtime))
         # local search
-        local_solutions, best_total, runtime, best_solution = run_heuristic(local_search, num_iterations, init_solution)
-        print("local search avg: ", sum(local_solutions) / num_iterations, "best", best_total)
-        print("improvement:", round(100 * (init_total - best_total) / init_total), " time: ", round(runtime))
+        #local_solutions, best_total, runtime, best_solution = run_heuristic(local_search, num_iterations, init_solution)
+        #print("local search avg: ", sum(local_solutions) / num_iterations, "best", best_total)
+        #print("improvement:", round(100 * (init_total - best_total) / init_total), " time: ", round(runtime))
         # annealing
-        annealing_solutions, best_total, runtime, best_solution = run_heuristic(annealing_setup, num_iterations,
-                                                                                init_solution)
+        annealing_solutions, best_total, runtime, best_solution = run_heuristic(annealing_setup, num_iterations, init_solution)
         print("annealing search avg: ", sum(annealing_solutions) / num_iterations, "best", best_total)
         print("improvement:", round(100 * (init_total - best_total) / init_total), " time: ", round(runtime))
         print(best_solution)
