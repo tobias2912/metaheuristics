@@ -16,8 +16,8 @@ files = ["data/Call_7_Vehicle_3.txt", "data/Call_18_Vehicle_5.txt", "data/Call_0
 
 
 def main():
-    #test_annealing()
-    benchmark()
+    test_annealing()
+    #benchmark()
     # test_all()
     #data.readfile("data/Call_7_Vehicle_3.txt")  # 2,5M er best
     #init = [3, 3, 0, 7, 1, 7, 1, 0, 5, 5, 6, 6, 0, 4, 2, 4, 2]
@@ -42,8 +42,8 @@ def test_annealing():
     # data.readfile("data/Call_7_Vehicle_3.txt")  # 14 er best
     # data.readfile("data/Call_18_Vehicle_5.txt")  # 2,5M er best
     # data.readfile("data/Call_035_Vehicle_07.txt")  # 5M er best
-    # data.readfile("data/Call_080_Vehicle_20.txt")  # 13M er best
-    data.readfile("data/Call_130_Vehicle_40.txt")  # 13M er best
+    data.readfile("data/Call_080_Vehicle_20.txt")  # 13M er best
+    #data.readfile("data/Call_130_Vehicle_40.txt")  # 13M er best
     sol, best, runtime, best_solution = run_heuristic(annealing_setup, iterations, create_init_solution())
     print("\n\n annealing test result")
     print("avg {} best {} time {:.3}".format(round(sum(sol) / iterations), best, runtime))
