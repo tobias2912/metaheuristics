@@ -4,7 +4,7 @@ class Reader:
         self.callsDict = {}
         self.num_nodes = 0
         self.num_calls = 0
-        self.num_vehicles = 0
+        self.num_cars = 0
         self.vehicles = []
         self.vehiclesDict = {}
         self.calls = []
@@ -93,7 +93,7 @@ class Reader:
         fil.readline()
         self.num_nodes = int(fil.readline())
         fil.readline()
-        self.num_vehicles = int(fil.readline())
+        self.num_cars = int(fil.readline())
         fil.readline()
         # vehicles
         while True:

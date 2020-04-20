@@ -12,19 +12,67 @@ feasibel = Feasibility(data)
 files = ["data/Call_7_Vehicle_3.txt", "data/Call_18_Vehicle_5.txt", "data/Call_035_Vehicle_07.txt",
          "data/Call_080_Vehicle_20.txt", "data/Call_130_Vehicle_40.txt"]
 
-
+operators = \
+    [(ops.greedy_two_exchange, 92), (ops.one_reinsert, 1400), (ops.two_exch, 98), (ops.threeExch, 0),
+     (ops.assign_unused_call, 242), (ops.reduce_wait_two_ex, 4), (ops.greedy_one_reinsert, 400)]
 
 
 def main():
-    test_annealing()
-    #benchmark()
-    # test_all()
-    #data.readfile("data/Call_7_Vehicle_3.txt")  # 2,5M er best
-    #init = [3, 3, 0, 7, 1, 7, 1, 0, 5, 5, 6, 6, 0, 4, 2, 4, 2]
-    #print(ops.greedy_one_reinsert(init, data, feasibel))
+    # automate_weights()
+    # test_annealing()
+    # benchmark()
+    test_all()
+    # data.readfile("data/Call_7_Vehicle_3.txt")  # 2,5M er best
+    # init = [3, 3, 0, 0, 1, 1, 6, 6, 0, 4, 2, 4, 2, 5, 5]
+    # print("\n", ops.assign_unused_call(init, data, feasibel))
+
+
+def automate_weights():
+    cur_ops = operators.copy()
+    iterations = 100
+    record_improvment = 62
+    for tries in range(1, iterations):
+        change = 2 + round((iterations - tries) / 20)
+        print("start nr ", tries, "     change:", change)
+        op_num = random.randint(0, len(cur_ops) - 1)
+        o, w, = cur_ops[op_num]
+        if random.random() < 0.5:
+            new_weight = w + change
+        else:
+            new_weight = w - change
+        test_ops = cur_ops.copy()
+        test_ops[op_num] = o, max(0, new_weight)
+        improvements = []
+        for _ in range(1):
+            for file in files[1:4]:
+                data.readfile(file)
+                init_solution = create_init_solution()
+                init_total = feasibel.total_cost(init_solution)
+                _, objective = annealing_setup(init_solution, op=test_ops)
+                improvements.append((100 * (init_total - objective) / init_total))
+        improvement = sum(improvements) / len(improvements)
+        if improvement > record_improvment:
+            f, fw = cur_ops[op_num]
+            print(f.__name__, fw, "was set to weight", new_weight, "(", round(improvement - record_improvment, 2),
+                  "better), record is ", round(improvement, 1))
+            record_improvment = improvement
+            cur_ops = test_ops
+
+            __print_operators(cur_ops)
+        else:
+            continue
+    print("\n finished \n", cur_ops)
+
+
+def __print_operators(op_list):
+    out = ""
+    for op, we in op_list:
+        out += ("(ops." + op.__name__ + "," + str(we) + "),")
+    print(out)
+
 
 def benchmark():
-    num_iterations = 1
+    num_iterations = 2
     improvements = []
     for file in files[1:4]:
         data.readfile(file)
@@ -33,17 +81,19 @@ def benchmark():
         # annealing
         annealing_solutions, best_total, runtime, best_solution = run_heuristic(annealing_setup, num_iterations,
                                                                                 init_solution)
-        print("total: ", best_total)
+        print("total: ", best_total, "runtime", runtime)
+        print("#################")
         improvements.append(round(100 * (init_total - best_total) / init_total))
-    print("avg improvement: ", round(100 * (init_total - best_total) / init_total))
+    print("----------------\navg improvement: ", round(100 * (init_total - best_total) / init_total))
+
 
 def test_annealing():
-    iterations = 1
+    iterations = 3
     # data.readfile("data/Call_7_Vehicle_3.txt")  # 14 er best
     # data.readfile("data/Call_18_Vehicle_5.txt")  # 2,5M er best
     # data.readfile("data/Call_035_Vehicle_07.txt")  # 5M er best
-    data.readfile("data/Call_080_Vehicle_20.txt")  # 13M er best
-    #data.readfile("data/Call_130_Vehicle_40.txt")  # 13M er best
+    # data.readfile("data/Call_080_Vehicle_20.txt")  # 13M er best
+    # data.readfile("data/Call_130_Vehicle_40.txt")  # 13M er best
     sol, best, runtime, best_solution = run_heuristic(annealing_setup, iterations, create_init_solution())
     print("\n\n annealing test result")
     print("avg {} best {} time {:.3}".format(round(sum(sol) / iterations), best, runtime))
@@ -68,14 +118,12 @@ def run_heuristic(func, num_iterations, init_solution):
     return solution_objectives, bestTotal, (end - start) / num_iterations, best_sol
 
 
-def annealing_setup(init_solution):
+def annealing_setup(init_solution, op=operators):
     iterations = 10000
     pMax = 0.9
     pMin = 0.1
     a = 0.9984
-    operators = \
-        [(ops.greedy_two_exchange, 10), (ops.one_reinsert, 150), (ops.two_exch, 10), (ops.threeExch, 1),
-                 (ops.assign_unused_call, 0), (ops.reduce_wait_two_ex, 1), (ops.greedy_one_reinsert, 20)]
+
     minDelta, maxDelta = get_delta_e()
     t1 = -minDelta / np.log(pMax)
     t2 = -maxDelta / np.log(pMax)
@@ -84,7 +132,7 @@ def annealing_setup(init_solution):
     start_temp = max(t1, t2, t3, t4)
     # endTemp = min(t1, t2, t3, t4)
     # print("starttemp", round(start_temp), "endtemp", round(endTemp), "a", a)
-    solution, objective = simulated_annealing(init_solution, start_temp, a, operators, iterations)
+    solution, objective = simulated_annealing(init_solution, start_temp, a, op, iterations)
     return solution, objective
 
 
@@ -138,8 +186,8 @@ def simulated_annealing(init_solution, temp_start, a, operators, iterations=1000
     # print("best objective is ", feasibel.total_cost(best_solution))
     # print("no changes by operator:", no_changes1, no_changes2, no_changes3)
 
-    print(counter)
-    counter.print_not_feasible_operators()
+    # print(counter)
+    # counter.print_not_feasible_operators()
     return best_solution, feasibel.total_cost(best_solution)
 
 
@@ -166,17 +214,16 @@ def test_all():
         init_solution = create_init_solution()
         init_total = feasibel.total_cost(init_solution)
         # random
-        random_solutions, best_total, runtime, best_solution = run_heuristic(random_search, num_iterations,
-                                                                             init_solution)
-        print("random search avg: ", sum(random_solutions) / num_iterations, "best", best_total)
-        print("improvement:", round(100 * (init_total - best_total) / init_total), " time: ", round(runtime))
+        #random_solutions, best_total, runtime, best_solution = run_heuristic(random_search, num_iterations,
+        #                                                                     init_solution)
+        #print("random search avg: ", sum(random_solutions) / num_iterations, "best", best_total)
+        #print("improvement:", round(100 * (init_total - best_total) / init_total), " time: ", round(runtime))
         # local search
-        local_solutions, best_total, runtime, best_solution = run_heuristic(local_search, num_iterations, init_solution)
-        print("local search avg: ", sum(local_solutions) / num_iterations, "best", best_total)
-        print("improvement:", round(100 * (init_total - best_total) / init_total), " time: ", round(runtime))
+        #local_solutions, best_total, runtime, best_solution = run_heuristic(local_search, num_iterations, init_solution)
+        #print("local search avg: ", sum(local_solutions) / num_iterations, "best", best_total)
+        #print("improvement:", round(100 * (init_total - best_total) / init_total), " time: ", round(runtime))
         # annealing
-        annealing_solutions, best_total, runtime, best_solution = run_heuristic(annealing_setup, num_iterations,
-                                                                                init_solution)
+        annealing_solutions, best_total, runtime, best_solution = run_heuristic(annealing_setup, num_iterations, init_solution)
         print("annealing search avg: ", sum(annealing_solutions) / num_iterations, "best", best_total)
         print("improvement:", round(100 * (init_total - best_total) / init_total), " time: ", round(runtime))
         print(best_solution)
@@ -201,14 +248,14 @@ def get_delta_e():
 
 
 class Counter:
-    better_count, random_accepts_count, no_changes1, no_changes2, no_changes3, feasible_count, record_count = 0, 0, 0, 0, 0, 0, 0
+    better_count, random_accepts_count, no_changes, no_changes2, no_changes3, feasible_count, record_count = 0, 0, 0, 0, 0, 0, 0
     feasible_list = []
     random_accepts_list = []
     better_count_list = []
     record_list = []
 
     def __init__(self, operators):
-        self.better_count, self.random_accepts_count, self.no_changes1, self.no_changes2 = 0, 0, 0, 0
+        self.better_count, self.random_accepts_count, self.no_changes, self.no_changes2 = 0, 0, 0, 0
         self.no_changes3, self.feasible_count, self.record_count = 0, 0, 0
         self.feasible_list = []
         self.random_accepts_list = []
@@ -242,7 +289,7 @@ class Counter:
         self.feasible_list.pop(0)
 
     def inc_no_changes(self):
-        self.no_changes1 += 1
+        self.no_changes += 1
 
     def inc_better(self):
         self.better_count += 1
@@ -254,7 +301,8 @@ class Counter:
         self.random_accepts_count += 1
 
     def __repr__(self):
-        out = ("feasible, better, random, record\n")
+        out = "no changes: " + str(self.no_changes)
+        out += ("\nfeasible, better, random, record\n")
         for i in range(len(self.feasible_list)):
             out += ('   {:6}{:6}{:6}{:6}\n'.format(self.feasible_list[i], self.better_count_list[i],
                                                    self.random_accepts_list[i], self.record_list[i]))
@@ -266,7 +314,7 @@ class Counter:
 
 
 def create_init_solution():
-    solution = [0 for _ in range(data.num_vehicles)]
+    solution = [0 for _ in range(data.num_cars)]
     solution += list(range(1, data.num_calls + 1))
     solution += list(range(1, data.num_calls + 1))
     return solution
@@ -277,11 +325,11 @@ def local_search(init_solution, p1=0.3, p2=0.3, iterations=10000):
     for _ in range(iterations):
         rand = ops.random.random()
         if rand < p1:
-            current = ops.two_exch(best_solution, data.num_vehicles)
+            current = ops.two_exch(best_solution, data.num_cars)
         elif rand < p1 + p2:
-            current = ops.threeExch(best_solution, data.num_vehicles)
+            current = ops.threeExch(best_solution, data.num_cars)
         else:
-            current = ops.one_reinsert(best_solution, data.num_vehicles, data.num_calls)
+            current = ops.one_reinsert(best_solution, data.num_cars, data.num_calls)
         if feasibel.is_feasible(current) and feasibel.total_cost(current) < feasibel.total_cost(best_solution):
             best_solution = current
     # print("localsearch best is ", totalCost(best_solution), " - ", best_solution)
@@ -334,7 +382,7 @@ def generateSolution():
 
 def generateRandom():
     car = {}
-    num_vehicles = data.num_vehicles + 1
+    num_vehicles = data.num_cars + 1
     for carN in range(1, num_vehicles + 1):
         car[carN] = []
     calls = range(1, data.getNumCalls() + 1)

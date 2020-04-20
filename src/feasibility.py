@@ -48,7 +48,7 @@ class Feasibility:
         for call in solution:
             if call == 0:
                 carIndex = carIndex + 1
-                if carIndex >= self.data.num_vehicles + 1:
+                if carIndex >= self.data.num_cars + 1:
                     # dummy car
                     return True
                 startedCalls = []
@@ -113,7 +113,7 @@ class Feasibility:
         for call in solution:
             if call == 0:
                 carIndex = carIndex + 1
-                if carIndex >= self.data.num_vehicles + 1:
+                if carIndex >= self.data.num_cars + 1:
                     # dummy car
                     return True
                 startedCalls = []
@@ -193,7 +193,7 @@ class Feasibility:
 
         for call in solution:
             if call == 0 or dummyCar:
-                if carIndex + 1 > self.data.num_vehicles:
+                if carIndex + 1 > self.data.num_cars:
                     dummyCar = True
                     if call != 0 and call not in startedCalls:
                         (_, _, _, failCost, _, _, _, _) = callsDict[call]
