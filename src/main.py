@@ -12,21 +12,21 @@ feasibel = Feasibility(data)
 files = ["data/Call_7_Vehicle_3.txt", "data/Call_18_Vehicle_5.txt", "data/Call_035_Vehicle_07.txt",
          "data/Call_080_Vehicle_20.txt", "data/Call_130_Vehicle_40.txt"]
 
-operators = \
-    [(ops.greedy_two_exchange, 92), (ops.one_reinsert, 1400), (ops.two_exch, 98), (ops.threeExch, 0),
-     (ops.assign_unused_call, 242), (ops.reduce_wait_two_ex, 4), (ops.greedy_one_reinsert, 400)]
+operators = {ops.greedy_two_exchange: 92, ops.one_reinsert: 1400, ops.two_exch: 98, ops.threeExch: 5,
+             ops.assign_unused_call: 242, ops.reduce_wait_two_ex: 4, ops.greedy_one_reinsert: 400}
 
 
 def main():
     # automate_weights()
-    # test_annealing()
-    # benchmark()
-    test_all()
+    #test_annealing()
+    benchmark()
+    # test_all()
     # data.readfile("data/Call_7_Vehicle_3.txt")  # 2,5M er best
     # init = [3, 3, 0, 0, 1, 1, 6, 6, 0, 4, 2, 4, 2, 5, 5]
     # print("\n", ops.assign_unused_call(init, data, feasibel))
 
 
+"""
 def automate_weights():
     cur_ops = operators.copy()
     iterations = 100
@@ -62,19 +62,14 @@ def automate_weights():
         else:
             continue
     print("\n finished \n", cur_ops)
-
-
-def __print_operators(op_list):
-    out = ""
-    for op, we in op_list:
-        out += ("(ops." + op.__name__ + "," + str(we) + "),")
-    print(out)
+"""
 
 
 def benchmark():
     num_iterations = 2
     improvements = []
     for file in files[1:4]:
+        print(file)
         data.readfile(file)
         init_solution = create_init_solution()
         init_total = feasibel.total_cost(init_solution)
@@ -84,24 +79,26 @@ def benchmark():
         print("total: ", best_total, "runtime", runtime)
         print("#################")
         improvements.append(round(100 * (init_total - best_total) / init_total))
-    print("----------------\navg improvement: ", round(100 * (init_total - best_total) / init_total))
+    print("----------------\navg improvement: ", sum(improvements)/3)
 
 
 def test_annealing():
-    iterations = 3
+    iterations = 1
     # data.readfile("data/Call_7_Vehicle_3.txt")  # 14 er best
-    # data.readfile("data/Call_18_Vehicle_5.txt")  # 2,5M er best
-    # data.readfile("data/Call_035_Vehicle_07.txt")  # 5M er best
-    # data.readfile("data/Call_080_Vehicle_20.txt")  # 13M er best
+    #data.readfile("data/Call_18_Vehicle_5.txt")  # 2,5M er best
+    data.readfile("data/Call_035_Vehicle_07.txt")  # 5M er best
+    #data.readfile("data/Call_080_Vehicle_20.txt")  # 13M er best
     # data.readfile("data/Call_130_Vehicle_40.txt")  # 13M er best
     sol, best, runtime, best_solution = run_heuristic(annealing_setup, iterations, create_init_solution())
+    init_cost = feasibel.total_cost(create_init_solution())
     print("\n\n annealing test result")
-    print("avg {} best {} time {:.3}".format(round(sum(sol) / iterations), best, runtime))
-    print(best_solution)
+    print("avg {} best {} time {:.3}, improvement {}".format(round(sum(sol) / iterations), best, runtime, round(100 * (init_cost - best) / init_cost)))
+    #print(best_solution)
 
 
 def run_heuristic(func, num_iterations, init_solution):
     """
+    time is per iteration
     :rtype: solution, best objective, time
     """
     solution_objectives = []
@@ -118,12 +115,12 @@ def run_heuristic(func, num_iterations, init_solution):
     return solution_objectives, bestTotal, (end - start) / num_iterations, best_sol
 
 
-def annealing_setup(init_solution, op=operators):
+def annealing_setup(init_solution):
     iterations = 10000
     pMax = 0.9
     pMin = 0.1
     a = 0.9984
-
+    op = operators.copy()
     minDelta, maxDelta = get_delta_e()
     t1 = -minDelta / np.log(pMax)
     t2 = -maxDelta / np.log(pMax)
@@ -136,70 +133,125 @@ def annealing_setup(init_solution, op=operators):
     return solution, objective
 
 
-def simulated_annealing(init_solution, temp_start, a, operators, iterations=10000):
+def escape_condition():
+    """
+    number of iterations without improvement to escape
+    """
+    return 30
+
+
+def update_operators(weighted_ops, selected_operator, score):
+    """
+    increase/decrease weight of current operator
+    """
+    for operator, w, in weighted_ops.items():
+        if operator == selected_operator:
+            weighted_ops[operator] = w + max(score, 5)
+            continue
+
+
+def escape(incumbent):
+    """
+    do reinserts and move calls to dummy to diversify
+    """
+    iterations = math.floor(data.num_calls/20*1.5)
+    for _ in range(iterations):
+        incumbent = ops.move_to_dummy(incumbent, data, feasibel)
+    return incumbent
+
+
+def simulated_annealing(init_solution, temp_start, a, weighted_ops: dict, iterations=10000):
     """
     :param init_solution: random solution
     :param temp_start: start temperature
     :param a: cooling
     :param iterations: default 10k
-    :param operators: list of (operator, weight)
+    :param weighted_ops: list of (operator, weight)
     """
     incumbent = init_solution.copy()
     best_solution = init_solution.copy()
     temp = temp_start
-    counter = Counter(operators)
+    counter = Counter(weighted_ops)
+    worse_iterations = 0
     for i in range(iterations):
-        if i % 1000 == 0:
+        if i % 2000 == 0:
             counter.update()
+            __print_operators(weighted_ops)
+        if worse_iterations > escape_condition():
+            counter.inc_escape()
+            incumbent = escape(incumbent)
+            worse_iterations = 0
+            continue
         # try to generate feasible solution
-        current_operator = get_operator(operators)
+        current_operator = select_operator(weighted_ops)
         for _ in range(10):
             new_solution = current_operator(incumbent, data, feasibel)
             if feasibel.is_feasible(new_solution):
                 break
-
         if not feasibel.is_feasible(new_solution):
             counter.update_infeasible_operator(current_operator)
+            update_operators(weighted_ops, current_operator, -1)
             continue
         else:
             counter.inc_feasible()
-
         if new_solution == incumbent:
             counter.inc_no_changes()
+            update_operators(weighted_ops, current_operator, -1)
             continue
         delta_e = feasibel.total_cost(new_solution) - feasibel.total_cost(incumbent)
         if delta_e < 0:
+            # accept better
+            update_operators(weighted_ops, current_operator, 1)
+            worse_iterations = 0
             incumbent = new_solution.copy()
             counter.inc_better()
             if feasibel.total_cost(incumbent) < feasibel.total_cost(best_solution):
+                update_operators(weighted_ops, current_operator, 10)
                 counter.inc_record()
                 best_solution = incumbent.copy()
         elif random.random() < math.e ** (-delta_e / temp):
+            # randomly accept worse
+            worse_iterations += 1
             if delta_e != 0:
                 counter.inc_random_accepts()
             incumbent = new_solution.copy()
+        else:
+            update_operators(weighted_ops, current_operator, -1)
+            worse_iterations += 1
         temp = temp * a
     counter.append_all()
 
     # print("\nannealing search results:")
     # print("temperature ended at ",temp)
     # print("best objective is ", feasibel.total_cost(best_solution))
-    # print("no changes by operator:", no_changes1, no_changes2, no_changes3)
-
-    # print(counter)
+    # print("no changes by operator:", no_changes1, no_changes2, no_changes3
+    print(counter)
     # counter.print_not_feasible_operators()
     return best_solution, feasibel.total_cost(best_solution)
 
 
-def get_operator(operators):
+def __print_operators(op_list, percent=True):
+    out = ""
+    total_weight = sum([w for _, w in op_list.items()])
+    for op, we in op_list.items():
+        out += "{:25}: ".format(op.__name__)
+        if percent:
+            out += "{:5}%".format(round((we / total_weight*100), 1))
+        else:
+            out += str(we)
+        out+="\n"
+    print(out)
+
+
+def select_operator(weighted_ops):
     """
-    get operator function weighted distribution
+    choose heuristic based on performance
     """
     # (operator, weight)
-    total_weight = sum([x for (_, x) in operators])
+    total_weight = sum([w for k, w in weighted_ops.items()])
     r = math.ceil(random.randint(0, total_weight))
     counter = 0
-    for op, w in operators:
+    for op, w in weighted_ops.items():
         counter += w
         if r <= counter:
             return op
@@ -214,16 +266,17 @@ def test_all():
         init_solution = create_init_solution()
         init_total = feasibel.total_cost(init_solution)
         # random
-        #random_solutions, best_total, runtime, best_solution = run_heuristic(random_search, num_iterations,
+        # random_solutions, best_total, runtime, best_solution = run_heuristic(random_search, num_iterations,
         #                                                                     init_solution)
-        #print("random search avg: ", sum(random_solutions) / num_iterations, "best", best_total)
-        #print("improvement:", round(100 * (init_total - best_total) / init_total), " time: ", round(runtime))
+        # print("random search avg: ", sum(random_solutions) / num_iterations, "best", best_total)
+        # print("improvement:", round(100 * (init_total - best_total) / init_total), " time: ", round(runtime))
         # local search
-        #local_solutions, best_total, runtime, best_solution = run_heuristic(local_search, num_iterations, init_solution)
-        #print("local search avg: ", sum(local_solutions) / num_iterations, "best", best_total)
-        #print("improvement:", round(100 * (init_total - best_total) / init_total), " time: ", round(runtime))
+        # local_solutions, best_total, runtime, best_solution = run_heuristic(local_search, num_iterations, init_solution)
+        # print("local search avg: ", sum(local_solutions) / num_iterations, "best", best_total)
+        # print("improvement:", round(100 * (init_total - best_total) / init_total), " time: ", round(runtime))
         # annealing
-        annealing_solutions, best_total, runtime, best_solution = run_heuristic(annealing_setup, num_iterations, init_solution)
+        annealing_solutions, best_total, runtime, best_solution = run_heuristic(annealing_setup, num_iterations,
+                                                                                init_solution)
         print("annealing search avg: ", sum(annealing_solutions) / num_iterations, "best", best_total)
         print("improvement:", round(100 * (init_total - best_total) / init_total), " time: ", round(runtime))
         print(best_solution)
@@ -254,15 +307,14 @@ class Counter:
     better_count_list = []
     record_list = []
 
-    def __init__(self, operators):
+    def __init__(self, weighted_ops: dict):
+        self.escape_count = 0
         self.better_count, self.random_accepts_count, self.no_changes, self.no_changes2 = 0, 0, 0, 0
         self.no_changes3, self.feasible_count, self.record_count = 0, 0, 0
-        self.feasible_list = []
-        self.random_accepts_list = []
-        self.better_count_list = []
-        self.record_list = []
+        self.feasible_list, self.random_accepts_list, self.better_count_list = [], [], []
+        self.escape_count_list, self.record_list = [], []
         self.not_feasible_operators = {}
-        for op, w in operators:
+        for op, w in weighted_ops.items():
             self.not_feasible_operators[op.__name__] = 0
 
     def update_infeasible_operator(self, operator):
@@ -273,7 +325,8 @@ class Counter:
         self.better_count_list.append(self.better_count)
         self.feasible_list.append(self.feasible_count)
         self.record_list.append(self.record_count)
-        self.better_count, self.random_accepts_count, self.feasible_count, self.record_count = 0, 0, 0, 0
+        self.escape_count_list.append(self.escape_count)
+        self.better_count, self.random_accepts_count, self.feasible_count, self.record_count, self.escape_count = 0, 0, 0, 0, 0
 
     def inc_feasible(self):
         self.feasible_count += 1
@@ -283,10 +336,12 @@ class Counter:
         self.better_count_list.append(self.better_count)
         self.feasible_list.append(self.feasible_count)
         self.record_list.append(self.record_count)
+        self.escape_count_list.append(self.escape_count)
         self.record_list.pop(0)
         self.random_accepts_list.pop(0)
         self.better_count_list.pop(0)
         self.feasible_list.pop(0)
+        self.escape_count_list.pop(0)
 
     def inc_no_changes(self):
         self.no_changes += 1
@@ -300,12 +355,16 @@ class Counter:
     def inc_random_accepts(self):
         self.random_accepts_count += 1
 
+    def inc_escape(self):
+        self.escape_count += 1
+
     def __repr__(self):
         out = "no changes: " + str(self.no_changes)
-        out += ("\nfeasible, better, random, record\n")
+        out += ("\nfeasible, better, random, record, escapes\n")
         for i in range(len(self.feasible_list)):
-            out += ('   {:6}{:6}{:6}{:6}\n'.format(self.feasible_list[i], self.better_count_list[i],
-                                                   self.random_accepts_list[i], self.record_list[i]))
+            out += ('   {:7}{:7}{:7}{:7}{:7}\n'.format(self.feasible_list[i], self.better_count_list[i],
+                                                       self.random_accepts_list[i], self.record_list[i],
+                                                       self.escape_count_list[i]))
         return out
 
     def print_not_feasible_operators(self):

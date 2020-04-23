@@ -311,6 +311,24 @@ def __get_dummy_calls(init_solution):
     raise error
 
 
+def move_to_dummy(init_solution:list, data: Reader, feasible):
+    """
+    diversify
+    move random call to unused
+    """
+    assert init_solution is not None
+    start, stop, carnumber = __get_nonempty_car(init_solution, data)
+    if carnumber is not None:
+        callindex = random.randint(start, stop-1)
+        call = init_solution[callindex]
+        assert call != 0
+        init_solution.remove(call)
+        init_solution.remove(call)
+        init_solution.append(call)
+        init_solution.append(call)
+    return init_solution
+
+
 def assign_unused_call(init_solution, data: Reader, feasible):
     """
     assign most expensive dummy call to random vehicle
@@ -444,7 +462,6 @@ def two_exch(old_solution, data, feasibel):
     swap two random numbers within one random car
     can return same solution
     ! never swaps call between cars
-    maintains validity
     :type old_solution: list
     :return: new solution
     """
