@@ -20,7 +20,7 @@ def main():
     # automate_weights()
     #test_annealing()
     benchmark()
-    # test_all()
+    #test_all()
     # data.readfile("data/Call_7_Vehicle_3.txt")  # 2,5M er best
     # init = [3, 3, 0, 0, 1, 1, 6, 6, 0, 4, 2, 4, 2, 5, 5]
     # print("\n", ops.assign_unused_call(init, data, feasibel))
@@ -137,7 +137,7 @@ def escape_condition():
     """
     number of iterations without improvement to escape
     """
-    return 30
+    return 20
 
 
 def update_operators(weighted_ops, selected_operator, score):
@@ -154,9 +154,11 @@ def escape(incumbent):
     """
     do reinserts and move calls to dummy to diversify
     """
-    iterations = math.floor(data.num_calls/20*1.5)
+    call_percentage = 5
+    iterations = math.floor(data.num_calls/100*call_percentage)
     for _ in range(iterations):
         incumbent = ops.move_to_dummy(incumbent, data, feasibel)
+    incumbent = ops.n_exchange(incumbent, data, feasibel, n=iterations*5)
     return incumbent
 
 
@@ -173,10 +175,13 @@ def simulated_annealing(init_solution, temp_start, a, weighted_ops: dict, iterat
     temp = temp_start
     counter = Counter(weighted_ops)
     worse_iterations = 0
+    prev_record = None
+    all_records = []
     for i in range(iterations):
         if i % 2000 == 0:
             counter.update()
-            __print_operators(weighted_ops)
+            #__print_operators(weighted_ops)
+            print(len(all_records))
         if worse_iterations > escape_condition():
             counter.inc_escape()
             incumbent = escape(incumbent)
@@ -198,9 +203,18 @@ def simulated_annealing(init_solution, temp_start, a, weighted_ops: dict, iterat
             counter.inc_no_changes()
             update_operators(weighted_ops, current_operator, -1)
             continue
+        if new_solution in all_records:
+            incumbent = ops.n_exchange(incumbent, data, feasibel)
+            worse_iterations = 0
+            continue
         delta_e = feasibel.total_cost(new_solution) - feasibel.total_cost(incumbent)
         if delta_e < 0:
             # accept better
+            if prev_record is not None:
+                all_records.remove(prev_record)
+            all_records.append(new_solution)
+            prev_record = new_solution
+
             update_operators(weighted_ops, current_operator, 1)
             worse_iterations = 0
             incumbent = new_solution.copy()
@@ -210,6 +224,7 @@ def simulated_annealing(init_solution, temp_start, a, weighted_ops: dict, iterat
                 counter.inc_record()
                 best_solution = incumbent.copy()
         elif random.random() < math.e ** (-delta_e / temp):
+            prev_record = None
             # randomly accept worse
             worse_iterations += 1
             if delta_e != 0:

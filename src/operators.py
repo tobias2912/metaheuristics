@@ -47,6 +47,38 @@ def similar_two_exchange(solution, data, feasibel):
     return new_solution
 
 
+def n_exchange(old_solution, data, feasibel, n=5):
+    """
+    swap two random numbers within random cars
+    repeat n times
+    ! never swaps call between cars
+    :return: new solution
+    """
+    current_solution = old_solution.copy()
+    for _ in range(n):
+        n_cars = data.num_cars
+        for x in range(num_tries):
+            car_number = math.ceil(random.random() * n_cars)
+            solution = current_solution.copy()
+            start, stop, car = __get_nonempty_car(solution, data)
+            if car is None:
+                continue
+            break
+        t1 = random.randint(start, stop)
+        t2 = random.randint(start, stop)
+        for _ in range(num_tries_index):
+            if solution[t1] != solution[t2]:
+                continue
+            else:
+                t2 = random.randint(start, stop)
+        temp = solution[t1]
+        solution[t1] = solution[t2]
+        solution[t2] = temp
+        if feasibel.is_feasible(solution):
+            current_solution = solution
+    return current_solution
+
+
 def reduce_wait_two_ex(solution, data, feasibel):
     """
     in random non empty car, select most waqited node and swap with best
@@ -311,7 +343,7 @@ def __get_dummy_calls(init_solution):
     raise error
 
 
-def move_to_dummy(init_solution:list, data: Reader, feasible):
+def move_to_dummy(init_solution: list, data: Reader, feasible):
     """
     diversify
     move random call to unused
@@ -319,7 +351,7 @@ def move_to_dummy(init_solution:list, data: Reader, feasible):
     assert init_solution is not None
     start, stop, carnumber = __get_nonempty_car(init_solution, data)
     if carnumber is not None:
-        callindex = random.randint(start, stop-1)
+        callindex = random.randint(start, stop - 1)
         call = init_solution[callindex]
         assert call != 0
         init_solution.remove(call)
@@ -396,8 +428,8 @@ def __insert_call_brute_force(init_solution, call, car_number, data, feasibel):
         record_solution = solution
     else:
         for i1, _ in enumerate(solution[start:stop + 1]):
-            for i2, _ in enumerate(solution[start+i1:stop + 2]):
-                i2 = i2 + i1 +1
+            for i2, _ in enumerate(solution[start + i1:stop + 2]):
+                i2 = i2 + i1 + 1
                 test_sol = solution.copy()
                 test_sol.insert(i1 + start, call)
                 test_sol.insert(i2 + start, call)
